@@ -143,18 +143,26 @@ const server = http.createServer(async (req, res) => {
         if (group === "veryOdd") ownedUltra.add(info.appearance);
       }
 
+      // build appearance → petId map for catalog images
+      const appearanceToPetId = new Map<number, string>();
+      for (const info of infos) {
+        if (!appearanceToPetId.has(info.appearance)) {
+          appearanceToPetId.set(info.appearance, relevant[infos.indexOf(info)].id);
+        }
+      }
+
       const odd = types.odd.map((t) => ({
         ...t,
         owned: ownedOdd.has(t.appearanceId),
-        iconUrl: ownedAppearanceToPetId.has(t.appearanceId)
-          ? petIconUrl(ownedAppearanceToPetId.get(t.appearanceId)!)
+        iconUrl: appearanceToPetId.has(t.appearanceId)
+          ? petIconUrl(appearanceToPetId.get(t.appearanceId)!)
           : null,
       }));
       const ultraOdd = types.ultraOdd.map((t) => ({
         ...t,
         owned: ownedUltra.has(t.appearanceId),
-        iconUrl: ownedAppearanceToPetId.has(t.appearanceId)
-          ? petIconUrl(ownedAppearanceToPetId.get(t.appearanceId)!)
+        iconUrl: appearanceToPetId.has(t.appearanceId)
+          ? petIconUrl(appearanceToPetId.get(t.appearanceId)!)
           : null,
       }));
 
