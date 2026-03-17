@@ -89,6 +89,19 @@ export async function resolveAppearanceDisplay(
   return m.get(appearanceId) ?? null;
 }
 
+/** Lookup appearance by ID only — searches all egg types */
+export async function resolveAppearanceByIdOnly(
+  appearanceId: number
+): Promise<AppearanceEntry | null> {
+  if (!appearanceId) return null;
+  const meta = await loadPetMeta();
+  for (const m of meta.values()) {
+    const e = m.get(appearanceId);
+    if (e) return e;
+  }
+  return null;
+}
+
 export type OddPool = "Odd" | "Ultra Odd";
 
 export interface OddUltraIndex {

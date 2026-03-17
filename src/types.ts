@@ -2,6 +2,7 @@ export interface RawPet {
   id: string;
   pool: string | number;
   name?: string;
+  eggType?: string | number;
   background: string | number;
   appearance?: string | number;
   rarity?: string | number;

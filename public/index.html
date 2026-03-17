@@ -44,11 +44,14 @@
         <div class="tabs">
           <button class="tab-btn active" data-tab="wallet">🎒 Wallet</button>
           <button class="tab-btn" data-tab="catalog">📖 All types</button>
-          <button class="tab-btn" data-tab="leaderboard" id="lb-tab-btn">🏆 Leaderboard</button>
+          <button class="tab-btn" data-tab="leaderboard">🏆 Board</button>
+          <button class="tab-btn" data-tab="stats">📊 Stats</button>
         </div>
 
         <div class="tab-panel active panel-wrap" id="tab-wallet">
           <div id="out-wallet"></div>
+          <div id="out-gallery" style="margin-top:14px;"></div>
+          <div id="out-missing" style="margin-top:14px;"></div>
         </div>
 
         <div class="tab-panel panel-wrap" id="tab-catalog">
@@ -57,6 +60,10 @@
 
         <div class="tab-panel panel-wrap" id="tab-leaderboard">
           <div id="out-leaderboard"><div class="k" style="padding:12px 0;">Click to load leaderboard…</div></div>
+        </div>
+
+        <div class="tab-panel panel-wrap" id="tab-stats">
+          <div id="out-stats"><div class="k" style="padding:12px 0;">Click to load stats…</div></div>
         </div>
       </div>
     </div>
@@ -71,7 +78,7 @@
       const resultArea = $("result-area");
 
       // Tabs
-      let lbLoaded = false;
+      let lbLoaded = false, statsLoaded = false;
       document.querySelectorAll('.tab-btn').forEach(b => {
         b.addEventListener('click', () => {
           document.querySelectorAll('.tab-btn').forEach(x => x.classList.remove('active'));
@@ -79,6 +86,7 @@
           b.classList.add('active');
           $('tab-' + b.dataset.tab).classList.add('active');
           if (b.dataset.tab === 'leaderboard' && !lbLoaded) loadLeaderboard();
+          if (b.dataset.tab === 'stats' && !statsLoaded) loadStats();
         });
       });
 
@@ -218,17 +226,81 @@
 
           window.__oddUltraUniqueTotals = j.oddUltraUniqueTotals || null;
           renderWallet(j.address, j.displayName, j.counts, j.totals, j.oddPets, j.veryOddPets, j.ownedUniqueOdd, j.ownedUniqueVeryOdd);
+          renderGallery(j.oddPets || [], j.veryOddPets || []);
+          renderMissing(c.missingOdd || [], c.missingUltraOdd || []);
           renderCatalog(c.odd || [], c.ultraOdd || []);
           resultArea.style.display = '';
-          // update deeplink
-          const url = new URL(location.href);
-          url.searchParams.set('address', a);
-          history.replaceState(null, '', url);
+          const urlObj = new URL(location.href);
+          urlObj.searchParams.set('address', a);
+          history.replaceState(null, '', urlObj);
         } catch (e) {
           err.textContent = String(e && e.message ? e.message : e);
         } finally {
           btn.disabled = false;
           btn.textContent = "Check";
+        }
+      }
+
+      function renderGallery(oddPets, veryOddPets) {
+        const all = [...veryOddPets, ...oddPets];
+        if (!all.length) { $('out-gallery').innerHTML = ''; return; }
+        const grid = all.map(p => {
+          const isUltra = veryOddPets.includes(p);
+          const burned = (p.name||'').toLowerCase().startsWith('unrevealed');
+          return `
+            <div style="position:relative; text-align:center;" title="${p.name}">
+              <img src="${p.iconUrl}" width="56" height="56" style="border-radius:10px; background:#0b1020; border:2px solid ${isUltra ? '#c084fc' : '#22304a'}; display:block;" />
+              ${burned ? '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:20px;">❌</div>' : ''}
+              ${isUltra ? '<div style="position:absolute;top:-4px;right:-4px;font-size:10px;">⚡</div>' : ''}
+            </div>`;
+        }).join('');
+        $('out-gallery').innerHTML = `
+          <div style="border-top:1px solid #22304a; padding-top:12px;">
+            <div class="v" style="margin-bottom:8px; font-size:13px;">Collection wall (${veryOddPets.length} ⚡ + ${oddPets.length} odd)</div>
+            <div style="display:flex; flex-wrap:wrap; gap:8px;">${grid}</div>
+          </div>`;
+      }
+
+      function renderMissing(missingOdd, missingUltra) {
+        if (!missingOdd.length && !missingUltra.length) { $('out-missing').innerHTML = ''; return; }
+        const section = (label, items) => items.length === 0 ? '' : `
+          <div style="margin-bottom:10px;">
+            <div class="k" style="font-size:13px; margin-bottom:6px;">Missing ${label} (${items.length})</div>
+            <div style="display:flex; flex-wrap:wrap; gap:6px;">
+              ${items.map(t => `<div style="background:#0b1020; border:1px solid #22304a; border-radius:8px; padding:4px 8px; font-size:12px; opacity:.7;">${t.displayName}${t.variant ? ' ('+t.variant+')' : ''}</div>`).join('')}
+            </div>
+          </div>`;
+        $('out-missing').innerHTML = `
+          <div style="border-top:1px solid #22304a; padding-top:12px;">
+            <div onclick="toggleSection('missing-inner')" style="cursor:pointer; display:flex; justify-content:space-between; margin-bottom:8px; user-select:none;">
+              <div class="v" style="font-size:13px;">Missing types 🎯</div>
+              <span id="missing-chevron" style="font-size:12px; opacity:.7;">▼</span>
+            </div>
+            <div id="missing-inner" style="display:none;">
+              ${section('Ultra Odd', missingUltra)}
+              ${section('Odd', missingOdd)}
+            </div>
+          </div>`;
+      }
+
+      async function loadStats() {
+        const el = $('out-stats');
+        el.innerHTML = '<div class="k" style="padding:12px 0;">Loading…</div>';
+        try {
+          const r = await fetch('/api/stats');
+          const j = await r.json();
+          if (!r.ok) throw new Error(j.error);
+          statsLoaded = true;
+          const topName = j.topCollector?.profileName || (j.topCollector?.address?.slice(0,10)+'…');
+          el.innerHTML = `
+            <div class="row"><div class="k">Total collectors</div><div class="v">${j.totalCollectors}</div></div>
+            <div class="row"><div class="k">Total Ultra Odd pets</div><div class="v">⚡ ${j.totalUltraOdd}</div></div>
+            <div class="row"><div class="k">Total Odd pets (of collectors)</div><div class="v">🎯 ${j.totalOdd}</div></div>
+            <div class="row"><div class="k">#1 collector</div><div class="v" style="max-width:60%;overflow:hidden;text-overflow:ellipsis;">${topName || '—'} (⚡${j.topCollector?.ultraOdd} / 🎯${j.topCollector?.odd})</div></div>
+            <div style="margin-top:14px; opacity:.6; font-size:12px;">Rarity heatmap (per appearance type) coming soon.</div>
+          `;
+        } catch(e) {
+          el.innerHTML = `<div class="err">${e.message || e}</div>`;
         }
       }
 

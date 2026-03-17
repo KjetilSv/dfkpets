@@ -16,6 +16,7 @@ const PETS_QUERY = /* graphql */ `
       id
       pool
       name
+      eggType
       background
       appearance
       rarity
