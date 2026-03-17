@@ -188,7 +188,15 @@ export async function getOddUltraTypesUnique(): Promise<{ odd: AppearanceType[];
     }
   }
 
-  const odd = [...oddMap.values()].sort((a, b) => a.appearanceId - b.appearanceId);
-  const ultraOdd = [...ultraMap.values()].sort((a, b) => a.appearanceId - b.appearanceId);
+  const byName = (a: AppearanceType, b: AppearanceType) => {
+    const ak = `${a.displayName} ${a.variant}`.toLowerCase();
+    const bk = `${b.displayName} ${b.variant}`.toLowerCase();
+    if (ak < bk) return -1;
+    if (ak > bk) return 1;
+    return a.appearanceId - b.appearanceId;
+  };
+
+  const odd = [...oddMap.values()].sort(byName);
+  const ultraOdd = [...ultraMap.values()].sort(byName);
   return { odd, ultraOdd };
 }
