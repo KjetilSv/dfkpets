@@ -44,6 +44,7 @@
         <div class="tabs">
           <button class="tab-btn active" data-tab="wallet">🎒 Wallet</button>
           <button class="tab-btn" data-tab="catalog">📖 All types</button>
+          <button class="tab-btn" data-tab="leaderboard" id="lb-tab-btn">🏆 Leaderboard</button>
         </div>
 
         <div class="tab-panel active panel-wrap" id="tab-wallet">
@@ -52,6 +53,10 @@
 
         <div class="tab-panel panel-wrap" id="tab-catalog">
           <div id="out-catalog"></div>
+        </div>
+
+        <div class="tab-panel panel-wrap" id="tab-leaderboard">
+          <div id="out-leaderboard"><div class="k" style="padding:12px 0;">Click to load leaderboard…</div></div>
         </div>
       </div>
     </div>
@@ -66,12 +71,14 @@
       const resultArea = $("result-area");
 
       // Tabs
+      let lbLoaded = false;
       document.querySelectorAll('.tab-btn').forEach(b => {
         b.addEventListener('click', () => {
           document.querySelectorAll('.tab-btn').forEach(x => x.classList.remove('active'));
           document.querySelectorAll('.tab-panel').forEach(x => x.classList.remove('active'));
           b.classList.add('active');
           $('tab-' + b.dataset.tab).classList.add('active');
+          if (b.dataset.tab === 'leaderboard' && !lbLoaded) loadLeaderboard();
         });
       });
 
@@ -222,6 +229,54 @@
         } finally {
           btn.disabled = false;
           btn.textContent = "Check";
+        }
+      }
+
+      async function loadLeaderboard(force) {
+        const el = $('out-leaderboard');
+        el.innerHTML = '<div class="k" style="padding:12px 0;">Loading leaderboard… (may take 10–30s first time)</div>';
+        try {
+          const url = force ? '/api/leaderboard?refresh=1' : '/api/leaderboard';
+          const r = await fetch(url);
+          const j = await r.json();
+          if (!r.ok) throw new Error(j.error || `HTTP ${r.status}`);
+          lbLoaded = true;
+
+          const age = j.ageSeconds != null
+            ? `<span style="opacity:.5;font-size:12px;"> · cached ${Math.floor(j.ageSeconds/60)}m ago</span>`
+            : '';
+
+          const rows = (j.entries || []).map((e, i) => {
+            const isMe = addr.value.trim().toLowerCase() === e.address;
+            const name = e.profileName || (e.address.slice(0,6) + '…' + e.address.slice(-4));
+            const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i+1}`;
+            return `
+              <div onclick="(function(){var a='${e.address}'; document.getElementById('addr').value=a; run(); document.querySelectorAll('.tab-btn')[0].click();})()"
+                style="display:flex; gap:10px; align-items:center; padding:9px 0; border-bottom:1px solid #22304a; cursor:pointer; ${isMe ? 'background:#0d1e3a;border-radius:8px;padding:9px 6px;' : ''}">
+                <div style="min-width:32px; text-align:center; font-size:15px;">${medal}</div>
+                <div style="flex:1; min-width:0;">
+                  <div class="v" style="font-size:14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${name}${isMe ? ' 👈' : ''}</div>
+                  <div class="k" style="font-size:11px;">${e.address.slice(0,10)}…</div>
+                </div>
+                <div style="text-align:right;">
+                  <div style="font-size:13px; font-weight:700; color:#c084fc;">⚡ ${e.ultraOdd}</div>
+                  <div style="font-size:12px; opacity:.7;">🎯 ${e.odd}</div>
+                </div>
+              </div>`;
+          }).join('');
+
+          el.innerHTML = `
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+              <div class="k" style="font-size:12px;">${j.entries.length} collectors${age}</div>
+              <button onclick="loadLeaderboard(true)" style="width:auto; padding:6px 12px; font-size:12px; margin:0;">↻ Refresh</button>
+            </div>
+            <div style="display:flex; justify-content:flex-end; gap:16px; margin-bottom:6px; font-size:12px; opacity:.6;">
+              <span>⚡ Ultra Odd</span><span>🎯 Odd</span>
+            </div>
+            ${rows || '<div class="k">(ingen)</div>'}
+          `;
+        } catch(e) {
+          el.innerHTML = `<div class="err">${e.message || e}</div>`;
         }
       }
 

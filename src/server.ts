@@ -8,6 +8,7 @@ import { PetLite, RawPet } from "./types.js";
 import { getGlobalTotals } from "./totals.js";
 import { getPetDisplayName, getPetInfo, mapLimit } from "./rpcPets.js";
 import { getOddUltraIndex, getOddUltraTypesUnique } from "./petMeta.js";
+import { getLeaderboard, getLeaderboardCacheAge } from "./leaderboardCache.js";
 
 function petIconUrl(id: string) {
   // preferred public image host
@@ -176,6 +177,13 @@ const server = http.createServer(async (req, res) => {
         }),
         "application/json"
       );
+    }
+
+    if (url.pathname === "/api/leaderboard") {
+      const force = url.searchParams.get("refresh") === "1";
+      const entries = await getLeaderboard(force);
+      const ageSeconds = getLeaderboardCacheAge();
+      return send(res, 200, JSON.stringify({ entries, ageSeconds }), "application/json");
     }
 
     return send(res, 404, "Not found");
