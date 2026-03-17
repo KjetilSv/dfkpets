@@ -17,27 +17,42 @@ const ABI = [
 const provider = new JsonRpcProvider(DFK_RPC_URL);
 const petCore = new Contract(PETCORE_DFKCHAIN, ABI, provider);
 
+import { resolveAppearanceDisplay } from "./petMeta.js";
+
 const nameCache = new Map<string, string>();
 
-function normalizeName(s: unknown, id: string) {
-  const name = typeof s === "string" ? s.trim() : "";
-  return name.length ? name : `Pet #${id}`;
+function fallbackName(id: string) {
+  return `Pet #${id}`;
 }
 
-/** Best-effort: resolves pet display name from chain (cached). */
+function buildDisplayName(meta: { displayName: string; variant: string } | null, id: string) {
+  if (!meta) return fallbackName(id);
+  const base = (meta.displayName ?? "").trim();
+  const variant = (meta.variant ?? "").trim();
+  if (!base) return fallbackName(id);
+  // Example: "Turtle (Blue)"
+  return variant ? `${base} (${variant})` : base;
+}
+
+/** Resolves a nice pet display name using Appearance/Family/Variant tables (cached). */
 export async function getPetDisplayName(petId: string): Promise<string> {
   if (nameCache.has(petId)) return nameCache.get(petId)!;
 
-  // If RPC is down or rate-limited, we still return a fallback.
   try {
     const pet = await petCore.getPetV2(BigInt(petId));
-    const name = normalizeName(pet?.name, petId);
+
+    const eggType = Number(pet?.eggType);
+    const appearance = Number(pet?.appearance);
+
+    const meta = await resolveAppearanceDisplay(eggType, appearance);
+    const name = buildDisplayName(meta ? { displayName: meta.displayName, variant: meta.variant } : null, petId);
+
     nameCache.set(petId, name);
     return name;
   } catch {
-    const fallback = `Pet #${petId}`;
-    nameCache.set(petId, fallback);
-    return fallback;
+    const name = fallbackName(petId);
+    nameCache.set(petId, name);
+    return name;
   }
 }
 
