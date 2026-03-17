@@ -25,7 +25,34 @@ function fallbackName(id: string) {
   return `Pet #${id}`;
 }
 
-function buildDisplayName(meta: { displayName: string; variant: string } | null, id: string) {
+function eggTypeLabel(eggType: number) {
+  switch (eggType) {
+    case 0:
+      return "Blue";
+    case 1:
+      return "Grey";
+    case 2:
+      return "Green";
+    case 3:
+      return "Yellow";
+    case 4:
+      return "Golden";
+    default:
+      return `EggType ${eggType}`;
+  }
+}
+
+function buildDisplayName(
+  meta: { displayName: string; variant: string } | null,
+  id: string,
+  eggType?: number,
+  appearanceId?: number
+) {
+  // Some pets are unrevealed and have appearanceId=0.
+  if (appearanceId === 0 && typeof eggType === "number") {
+    return `Unrevealed (${eggTypeLabel(eggType)} Egg)`;
+  }
+
   if (!meta) return fallbackName(id);
   const base = (meta.displayName ?? "").trim();
   const variant = (meta.variant ?? "").trim();
@@ -45,7 +72,12 @@ export async function getPetDisplayName(petId: string): Promise<string> {
     const appearance = Number(pet?.appearance);
 
     const meta = await resolveAppearanceDisplay(eggType, appearance);
-    const name = buildDisplayName(meta ? { displayName: meta.displayName, variant: meta.variant } : null, petId);
+    const name = buildDisplayName(
+      meta ? { displayName: meta.displayName, variant: meta.variant } : null,
+      petId,
+      eggType,
+      appearance
+    );
 
     nameCache.set(petId, name);
     return name;
