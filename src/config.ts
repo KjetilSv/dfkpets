@@ -5,7 +5,7 @@
 /** GraphQL subgraph endpoint for DFK pets */
 export const SUBGRAPH_URL =
   process.env.SUBGRAPH_URL ??
-  "https://api.thegraph.com/subgraphs/name/defikingdoms/pets-dfkchain";
+  "https://api.defikingdoms.com/graphql";
 
 /** pool value → rarity group */
 export const POOL_GROUP: Record<number, "odd" | "veryOdd"> = {
