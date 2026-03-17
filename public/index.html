@@ -55,7 +55,7 @@
         `;
       }
 
-      function render(address, counts, totals, oddPets, veryOddPets) {
+      function render(address, displayName, counts, totals, oddPets, veryOddPets) {
         const oddTotal = totals && typeof totals.oddTotal === 'number' ? totals.oddTotal : null;
         const veryOddTotal = totals && typeof totals.veryOddTotal === 'number' ? totals.veryOddTotal : null;
         const oddLabel = oddTotal != null ? `${counts.odd}/${oddTotal}` : `${counts.odd}`;
@@ -63,6 +63,7 @@
 
         out.innerHTML = `
           <div class="row"><div class="k">Address</div><div class="v" style="font-size:12px; max-width:55%; overflow:hidden; text-overflow:ellipsis;">${address}</div></div>
+          <div class="row"><div class="k">Display name</div><div class="v" style="font-size:12px; max-width:55%; overflow:hidden; text-overflow:ellipsis;">${displayName || '(none)'}</div></div>
           <div class="row"><div class="k">Odd (pool=1)</div><div class="v">${oddLabel}</div></div>
           <div style="margin:10px 0 14px;">
             ${(oddPets || []).map(petRow).join("") || '<div class="k">(ingen)</div>'}
@@ -88,7 +89,7 @@
           const r = await fetch(`/api/owner?address=${encodeURIComponent(a)}`);
           const j = await r.json();
           if (!r.ok) throw new Error(j.error || `HTTP ${r.status}`);
-          render(j.address, j.counts, j.totals, j.oddPets, j.veryOddPets);
+          render(j.address, j.displayName, j.counts, j.totals, j.oddPets, j.veryOddPets);
         } catch (e) {
           err.textContent = String(e && e.message ? e.message : e);
         } finally {

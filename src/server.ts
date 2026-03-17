@@ -2,7 +2,7 @@ import http from "node:http";
 import { readFileSync } from "node:fs";
 import { URL } from "node:url";
 import { getCountsByOwner } from "./leaderboard.js";
-import { fetchPetsByOwner } from "./graphql.js";
+import { fetchPetsByOwner, fetchProfileName } from "./graphql.js";
 import { POOL_GROUP } from "./config.js";
 import { PetLite, RawPet } from "./types.js";
 import { getGlobalTotals } from "./totals.js";
@@ -53,10 +53,11 @@ const server = http.createServer(async (req, res) => {
         return send(res, 400, JSON.stringify({ error: "Invalid address" }), "application/json");
       }
 
-      const [counts, pets, totals] = await Promise.all([
+      const [counts, pets, totals, profileName] = await Promise.all([
         getCountsByOwner(address),
         fetchPetsByOwner(address),
         getTotalsCached(),
+        fetchProfileName(address),
       ]);
 
       const oddPets: PetLite[] = [];
@@ -73,6 +74,7 @@ const server = http.createServer(async (req, res) => {
         200,
         JSON.stringify({
           address: address.toLowerCase(),
+          displayName: profileName,
           counts,
           totals,
           oddPets,

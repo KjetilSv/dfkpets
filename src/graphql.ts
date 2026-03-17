@@ -28,6 +28,15 @@ const PETS_QUERY = /* graphql */ `
   }
 `;
 
+const PROFILE_QUERY = /* graphql */ `
+  query ProfileById($id: ID!) {
+    profile(id: $id) {
+      id
+      name
+    }
+  }
+`;
+
 async function gqlRequest<T>(
   query: string,
   variables: Record<string, unknown>,
@@ -84,4 +93,15 @@ export async function fetchPetsByOwner(address: string): Promise<RawPet[]> {
   }
 
   return pets;
+}
+
+/** Fetch display/profile name for an address (if present in the subgraph) */
+export async function fetchProfileName(address: string): Promise<string | null> {
+  const id = address.toLowerCase();
+  const data = await gqlRequest<{ profile: { id: string; name: string } | null }>(
+    PROFILE_QUERY,
+    { id }
+  );
+  const name = data.profile?.name?.trim();
+  return name ? name : null;
 }
