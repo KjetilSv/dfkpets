@@ -1,0 +1,17 @@
+{
+  "name": "dfk-pet-leaderboard",
+  "version": "1.0.0",
+  "description": "DeFi Kingdoms Pet Leaderboard — odd & very odd tracker",
+  "scripts": {
+    "owner": "tsx src/cli.ts owner",
+    "leaderboard": "tsx src/cli.ts leaderboard"
+  },
+  "dependencies": {
+    "cross-fetch": "^4.0.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.7.0",
+    "typescript": "^5.4.0",
+    "@types/node": "^20.0.0"
+  }
+}
