@@ -27,11 +27,9 @@ const HOST = process.env.HOST ?? "0.0.0.0"; // LAN
 
 const indexHtml = readFileSync(new URL("../public/index.html", import.meta.url), "utf8");
 
-// cache global totals (fetch once on boot; can be refreshed later)
-let totalsPromise: Promise<{ oddTotal: number; veryOddTotal: number }> | null = null;
-function getTotalsCached() {
-  if (!totalsPromise) totalsPromise = getGlobalTotals();
-  return totalsPromise;
+// NOTE: totals cache disabled while iterating; totals are recomputed per request.
+async function getTotalsCached() {
+  return getGlobalTotals();
 }
 
 function send(res: http.ServerResponse, code: number, body: string, type = "text/plain") {
@@ -46,7 +44,9 @@ const server = http.createServer(async (req, res) => {
     const url = new URL(req.url ?? "/", `http://${req.headers.host ?? "localhost"}`);
 
     if (url.pathname === "/") {
-      return send(res, 200, indexHtml, "text/html");
+      // read on each request to avoid cache while iterating
+      const html = readFileSync(new URL("../public/index.html", import.meta.url), "utf8");
+      return send(res, 200, html, "text/html");
     }
 
     if (url.pathname === "/api/owner") {
