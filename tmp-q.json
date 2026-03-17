@@ -1,1 +1,0 @@
-﻿{"query":"query($id: ID!) { profile(id:$id) { id name } }","variables":{"id":"0x5aFD265bef05dbA6bd0d8d64993189476927339c"}}
