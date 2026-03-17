@@ -20,6 +20,8 @@
       .err { margin-top: 10px; color:#ff7b7b; white-space: pre-wrap; }
       .hint { opacity:0.7; font-size: 13px; margin-top:10px; }
       code { background: #0b1020; padding: 2px 6px; border-radius: 8px; border: 1px solid #22304a; }
+      .progress-bar-wrap { background:#1a2540; border-radius:6px; height:8px; margin:4px 0 10px; overflow:hidden; }
+      .progress-bar-fill { height:100%; border-radius:6px; background:#4f7cff; transition:width .3s; }
       .tabs { display:flex; gap:4px; margin: 14px 0 0; }
       .tab-btn { flex:1; padding: 10px; border-radius: 10px 10px 0 0; border:1px solid #22304a; border-bottom: none; background:#0d1521; color:#e8eefc; font-size: 15px; font-weight: 600; cursor:pointer; opacity: 0.6; }
       .tab-btn.active { background:#121826; opacity: 1; }
@@ -93,28 +95,38 @@
         `;
       }
 
-      function renderWallet(address, displayName, counts, totals, oddPets, veryOddPets) {
-        // Prefer unique totals from local json tables (appearanceId uniques)
-        const oddTotal = (window.__oddUltraUniqueTotals && typeof window.__oddUltraUniqueTotals.odd === 'number')
-          ? window.__oddUltraUniqueTotals.odd
-          : (totals && typeof totals.oddTotal === 'number' ? totals.oddTotal : null);
+      function progressBar(owned, total) {
+        const pct = total > 0 ? Math.round((owned / total) * 100) : 0;
+        return `
+          <div style="display:flex; justify-content:space-between; font-size:12px; margin-top:2px;">
+            <span class="k">${owned} unique / ${total} types</span>
+            <span class="v">${pct}%</span>
+          </div>
+          <div class="progress-bar-wrap">
+            <div class="progress-bar-fill" style="width:${pct}%;"></div>
+          </div>
+        `;
+      }
 
-        const veryOddTotal = (window.__oddUltraUniqueTotals && typeof window.__oddUltraUniqueTotals.ultraOdd === 'number')
-          ? window.__oddUltraUniqueTotals.ultraOdd
-          : (totals && typeof totals.veryOddTotal === 'number' ? totals.veryOddTotal : null);
-        const oddLabel = oddTotal != null ? `${counts.odd}/${oddTotal}` : `${counts.odd}`;
-        const veryOddLabel = veryOddTotal != null ? `${counts.veryOdd}/${veryOddTotal}` : `${counts.veryOdd}`;
+      function renderWallet(address, displayName, counts, totals, oddPets, veryOddPets, ownedUniqueOdd, ownedUniqueVeryOdd) {
+        const u = window.__oddUltraUniqueTotals || {};
+        const oddTotal = u.odd ?? null;
+        const ultraTotal = u.ultraOdd ?? null;
 
         outWallet.innerHTML = `
           <div class="row"><div class="k">Address</div><div class="v" style="font-size:12px; max-width:55%; overflow:hidden; text-overflow:ellipsis;">${address}</div></div>
-          <div class="row"><div class="k">Display name</div><div class="v" style="font-size:12px; max-width:55%; overflow:hidden; text-overflow:ellipsis;">${displayName || '(none)'}</div></div>
-          <div class="row"><div class="k">Odd (pool=1)</div><div class="v">${oddLabel}</div></div>
-          <div style="margin:10px 0 14px;">
-            ${(oddPets || []).map(petRow).join("") || '<div class="k">(ingen)</div>'}
-          </div>
-          <div class="row"><div class="k">Ultra Odd (pool=2)</div><div class="v">${veryOddLabel}</div></div>
-          <div style="margin:10px 0 4px;">
-            ${(veryOddPets || []).map(petRow).join("") || '<div class="k">(ingen)</div>'}
+          ${displayName ? `<div class="row"><div class="k">Display name</div><div class="v">${displayName}</div></div>` : ''}
+          <div style="margin-top:12px;">
+            <div class="row" style="border:0; padding-bottom:2px;"><div class="v">Odd</div><div class="v">${counts.odd} pets</div></div>
+            ${oddTotal != null ? progressBar(ownedUniqueOdd, oddTotal) : ''}
+            <div style="margin:8px 0 14px;">
+              ${(oddPets || []).map(petRow).join("") || '<div class="k">(none)</div>'}
+            </div>
+            <div class="row" style="border:0; padding-bottom:2px;"><div class="v">Ultra Odd</div><div class="v">${counts.veryOdd} pets</div></div>
+            ${ultraTotal != null ? progressBar(ownedUniqueVeryOdd, ultraTotal) : ''}
+            <div style="margin:8px 0 4px;">
+              ${(veryOddPets || []).map(petRow).join("") || '<div class="k">(none)</div>'}
+            </div>
           </div>
         `;
       }
@@ -133,9 +145,16 @@
 
       function typeRow(t) {
         const owned = !!t.owned;
+        const imgSrc = t.iconUrl || null;
         return `
-          <div style="display:flex; justify-content:space-between; gap:10px; padding:8px 0; border-bottom:1px solid #22304a; opacity:${owned ? 1 : 0.55}">
-            <div style="min-width:0;">
+          <div style="display:flex; gap:10px; align-items:center; padding:8px 0; border-bottom:1px solid #22304a; opacity:${owned ? 1 : 0.45}">
+            <div style="position:relative; width:40px; height:40px; flex:0 0 40px;">
+              ${imgSrc
+                ? `<img src="${imgSrc}" width="40" height="40" style="border-radius:10px; background:#0b1020; border:1px solid #22304a; display:block;" />`
+                : `<div style="width:40px;height:40px;border-radius:10px;background:#0b1020;border:1px solid #22304a;display:flex;align-items:center;justify-content:center;font-size:18px;">🐾</div>`
+              }
+            </div>
+            <div style="flex:1; min-width:0;">
               <div class="v" style="font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
                 ${owned ? '✅' : '⬜'} ${t.displayName}${t.variant ? ` (${t.variant})` : ''}
               </div>
@@ -167,9 +186,13 @@
           if (!r2.ok) throw new Error(c.error || `HTTP ${r2.status}`);
 
           window.__oddUltraUniqueTotals = j.oddUltraUniqueTotals || null;
-          renderWallet(j.address, j.displayName, j.counts, j.totals, j.oddPets, j.veryOddPets);
+          renderWallet(j.address, j.displayName, j.counts, j.totals, j.oddPets, j.veryOddPets, j.ownedUniqueOdd, j.ownedUniqueVeryOdd);
           renderCatalog(c.odd || [], c.ultraOdd || []);
           resultArea.style.display = '';
+          // update deeplink
+          const url = new URL(location.href);
+          url.searchParams.set('address', a);
+          history.replaceState(null, '', url);
         } catch (e) {
           err.textContent = String(e && e.message ? e.message : e);
         } finally {
@@ -181,8 +204,14 @@
       btn.addEventListener("click", run);
       addr.addEventListener("keydown", (e) => { if (e.key === "Enter") run(); });
 
-      // Prefill with Kjetil's address
-      addr.value = "0x092A58AE214343282EA615b3ffDB61fB71bD5B6C";
+      // Prefill from URL ?address= or default
+      const urlAddr = new URLSearchParams(location.search).get('address');
+      addr.value = (urlAddr && /^0x[0-9a-fA-F]{40}$/.test(urlAddr))
+        ? urlAddr
+        : "0x092A58AE214343282EA615b3ffDB61fB71bD5B6C";
+
+      // Auto-run if address in URL
+      if (urlAddr && /^0x[0-9a-fA-F]{40}$/.test(urlAddr)) run();
     </script>
   </body>
 </html>

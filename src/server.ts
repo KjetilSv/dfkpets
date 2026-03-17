@@ -64,6 +64,16 @@ const server = http.createServer(async (req, res) => {
         getOddUltraIndex(),
       ]);
 
+      // build appearance → petId map for owned pets (for catalog images)
+      const ownedAppearanceToPetId = new Map<number, string>();
+      const relevantOwned = pets.filter(p => POOL_GROUP[Number(p.pool)] === "odd" || POOL_GROUP[Number(p.pool)] === "veryOdd");
+      const ownedInfos = await mapLimit(relevantOwned, 6, async (p) => ({ id: p.id, ...(await getPetInfo(p.id)) }));
+      for (const info of ownedInfos) {
+        if (!ownedAppearanceToPetId.has(info.appearance)) {
+          ownedAppearanceToPetId.set(info.appearance, info.id);
+        }
+      }
+
       let oddPets: PetLite[] = [];
       let veryOddPets: PetLite[] = [];
 
@@ -94,6 +104,8 @@ const server = http.createServer(async (req, res) => {
           oddUltraUniqueTotals: oddUltra.uniqueAppearanceIds,
           oddPets,
           veryOddPets,
+          ownedUniqueOdd: [...new Set(ownedInfos.filter(i => POOL_GROUP[Number(pets.find(p=>p.id===i.id)?.pool)] === "odd").map(i => i.appearance))].length,
+          ownedUniqueVeryOdd: [...new Set(ownedInfos.filter(i => POOL_GROUP[Number(pets.find(p=>p.id===i.id)?.pool)] === "veryOdd").map(i => i.appearance))].length,
         }),
         "application/json"
       );
@@ -134,10 +146,16 @@ const server = http.createServer(async (req, res) => {
       const odd = types.odd.map((t) => ({
         ...t,
         owned: ownedOdd.has(t.appearanceId),
+        iconUrl: ownedAppearanceToPetId.has(t.appearanceId)
+          ? petIconUrl(ownedAppearanceToPetId.get(t.appearanceId)!)
+          : null,
       }));
       const ultraOdd = types.ultraOdd.map((t) => ({
         ...t,
         owned: ownedUltra.has(t.appearanceId),
+        iconUrl: ownedAppearanceToPetId.has(t.appearanceId)
+          ? petIconUrl(ownedAppearanceToPetId.get(t.appearanceId)!)
+          : null,
       }));
 
       return send(
