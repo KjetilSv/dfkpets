@@ -117,18 +117,41 @@
           <div class="row"><div class="k">Address</div><div class="v" style="font-size:12px; max-width:55%; overflow:hidden; text-overflow:ellipsis;">${address}</div></div>
           ${displayName ? `<div class="row"><div class="k">Display name</div><div class="v">${displayName}</div></div>` : ''}
           <div style="margin-top:12px;">
-            <div class="row" style="border:0; padding-bottom:2px;"><div class="v">Odd</div><div class="v">${counts.odd} pets</div></div>
+            <div onclick="toggleSection('odd-list')" style="cursor:pointer; display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid #22304a; user-select:none;">
+              <div class="v">Odd</div>
+              <div style="display:flex; align-items:center; gap:12px;">
+                <span class="k" style="font-size:14px;">${counts.odd} pets</span>
+                <span id="odd-chevron" style="font-size:12px; opacity:0.7;">▼</span>
+              </div>
+            </div>
             ${oddTotal != null ? progressBar(ownedUniqueOdd, oddTotal) : ''}
-            <div style="margin:8px 0 14px;">
+            <div id="odd-list" style="display:none; margin:8px 0 14px;">
               ${(oddPets || []).map(petRow).join("") || '<div class="k">(none)</div>'}
             </div>
-            <div class="row" style="border:0; padding-bottom:2px;"><div class="v">Ultra Odd</div><div class="v">${counts.veryOdd} pets</div></div>
+
+            <div onclick="toggleSection('ultra-list')" style="cursor:pointer; display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid #22304a; user-select:none;">
+              <div class="v">Ultra Odd</div>
+              <div style="display:flex; align-items:center; gap:12px;">
+                <span class="k" style="font-size:14px;">${counts.veryOdd} pets</span>
+                <span id="ultra-chevron" style="font-size:12px; opacity:0.7;">▼</span>
+              </div>
+            </div>
             ${ultraTotal != null ? progressBar(ownedUniqueVeryOdd, ultraTotal) : ''}
-            <div style="margin:8px 0 4px;">
+            <div id="ultra-list" style="display:none; margin:8px 0 4px;">
               ${(veryOddPets || []).map(petRow).join("") || '<div class="k">(none)</div>'}
             </div>
           </div>
         `;
+        // Attach toggle helper after render
+        window.toggleSection = function(id) {
+          const el = document.getElementById(id);
+          const chevronId = id === 'odd-list' ? 'odd-chevron' : 'ultra-chevron';
+          const chevron = document.getElementById(chevronId);
+          if (!el) return;
+          const open = el.style.display === 'none';
+          el.style.display = open ? 'block' : 'none';
+          if (chevron) chevron.textContent = open ? '▲' : '▼';
+        };
       }
 
       function renderCatalog(odd, ultraOdd) {
