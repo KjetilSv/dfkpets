@@ -20,18 +20,35 @@
       .err { margin-top: 10px; color:#ff7b7b; white-space: pre-wrap; }
       .hint { opacity:0.7; font-size: 13px; margin-top:10px; }
       code { background: #0b1020; padding: 2px 6px; border-radius: 8px; border: 1px solid #22304a; }
+      .tabs { display:flex; gap:4px; margin: 14px 0 0; }
+      .tab-btn { flex:1; padding: 10px; border-radius: 10px 10px 0 0; border:1px solid #22304a; border-bottom: none; background:#0d1521; color:#e8eefc; font-size: 15px; font-weight: 600; cursor:pointer; opacity: 0.6; }
+      .tab-btn.active { background:#121826; opacity: 1; }
+      .tab-panel { display:none; }
+      .tab-panel.active { display:block; }
+      .panel-wrap { background:#121826; border:1px solid #22304a; border-radius: 0 0 12px 12px; padding: 14px; }
     </style>
   </head>
   <body>
     <div class="wrap">
-      <h1>DFK Pets — Odd / Very Odd</h1>
+      <h1>DFK Pets — Odd / Ultra Odd</h1>
       <div class="card">
         <input id="addr" placeholder="0x..." autocomplete="off" autocapitalize="off" spellcheck="false" />
         <button id="btn">Check</button>
-        <div id="out" style="margin-top:12px;"></div>
         <div id="err" class="err"></div>
-        <div class="hint">
-          Uses <code>pool=1</code> (Odd) and <code>pool=2</code> (Very Odd) from <code>https://api.defikingdoms.com/graphql</code>.
+      </div>
+
+      <div id="result-area" style="display:none; margin-top:4px;">
+        <div class="tabs">
+          <button class="tab-btn active" data-tab="wallet">🎒 Wallet</button>
+          <button class="tab-btn" data-tab="catalog">📖 All types</button>
+        </div>
+
+        <div class="tab-panel active panel-wrap" id="tab-wallet">
+          <div id="out-wallet"></div>
+        </div>
+
+        <div class="tab-panel panel-wrap" id="tab-catalog">
+          <div id="out-catalog"></div>
         </div>
       </div>
     </div>
@@ -40,8 +57,20 @@
       const $ = (id) => document.getElementById(id);
       const btn = $("btn");
       const addr = $("addr");
-      const out = $("out");
+      const outWallet = $("out-wallet");
+      const outCatalog = $("out-catalog");
       const err = $("err");
+      const resultArea = $("result-area");
+
+      // Tabs
+      document.querySelectorAll('.tab-btn').forEach(b => {
+        b.addEventListener('click', () => {
+          document.querySelectorAll('.tab-btn').forEach(x => x.classList.remove('active'));
+          document.querySelectorAll('.tab-panel').forEach(x => x.classList.remove('active'));
+          b.classList.add('active');
+          $('tab-' + b.dataset.tab).classList.add('active');
+        });
+      });
 
       function petRow(p) {
         const burned = (p.name || '').toLowerCase().startsWith('unrevealed');
@@ -64,7 +93,7 @@
         `;
       }
 
-      function render(address, displayName, counts, totals, oddPets, veryOddPets) {
+      function renderWallet(address, displayName, counts, totals, oddPets, veryOddPets) {
         // Prefer unique totals from local json tables (appearanceId uniques)
         const oddTotal = (window.__oddUltraUniqueTotals && typeof window.__oddUltraUniqueTotals.odd === 'number')
           ? window.__oddUltraUniqueTotals.odd
@@ -76,18 +105,30 @@
         const oddLabel = oddTotal != null ? `${counts.odd}/${oddTotal}` : `${counts.odd}`;
         const veryOddLabel = veryOddTotal != null ? `${counts.veryOdd}/${veryOddTotal}` : `${counts.veryOdd}`;
 
-        out.innerHTML = `
+        outWallet.innerHTML = `
           <div class="row"><div class="k">Address</div><div class="v" style="font-size:12px; max-width:55%; overflow:hidden; text-overflow:ellipsis;">${address}</div></div>
           <div class="row"><div class="k">Display name</div><div class="v" style="font-size:12px; max-width:55%; overflow:hidden; text-overflow:ellipsis;">${displayName || '(none)'}</div></div>
           <div class="row"><div class="k">Odd (pool=1)</div><div class="v">${oddLabel}</div></div>
           <div style="margin:10px 0 14px;">
             ${(oddPets || []).map(petRow).join("") || '<div class="k">(ingen)</div>'}
           </div>
-          <div class="row"><div class="k">Very Odd (pool=2)</div><div class="v">${veryOddLabel}</div></div>
+          <div class="row"><div class="k">Ultra Odd (pool=2)</div><div class="v">${veryOddLabel}</div></div>
           <div style="margin:10px 0 4px;">
             ${(veryOddPets || []).map(petRow).join("") || '<div class="k">(ingen)</div>'}
           </div>
         `;
+      }
+
+      function renderCatalog(odd, ultraOdd) {
+        const section = (title, items) => `
+          <div style="margin-bottom:18px;">
+            <div class="v" style="margin-bottom:8px;">${title}</div>
+            ${items.map(typeRow).join('') || '<div class="k">(none)</div>'}
+          </div>
+        `;
+        outCatalog.innerHTML =
+          section('All Odd types', odd) +
+          section('All Ultra Odd types', ultraOdd);
       }
 
       function typeRow(t) {
@@ -125,22 +166,9 @@
           if (!r2.ok) throw new Error(c.error || `HTTP ${r2.status}`);
 
           window.__oddUltraUniqueTotals = j.oddUltraUniqueTotals || null;
-          render(j.address, j.displayName, j.counts, j.totals, j.oddPets, j.veryOddPets);
-
-          // Append full type lists (all possible odd/ultra types)
-          const extra = document.createElement('div');
-          extra.style.marginTop = '14px';
-          extra.innerHTML = `
-            <div class="card" style="margin-top:12px;">
-              <div class="v" style="margin-bottom:8px;">All Odd types</div>
-              <div>${(c.odd || []).map(typeRow).join('') || '<div class="k">(none)</div>'}</div>
-            </div>
-            <div class="card" style="margin-top:12px;">
-              <div class="v" style="margin-bottom:8px;">All Ultra Odd types</div>
-              <div>${(c.ultraOdd || []).map(typeRow).join('') || '<div class="k">(none)</div>'}</div>
-            </div>
-          `;
-          out.appendChild(extra);
+          renderWallet(j.address, j.displayName, j.counts, j.totals, j.oddPets, j.veryOddPets);
+          renderCatalog(c.odd || [], c.ultraOdd || []);
+          resultArea.style.display = '';
         } catch (e) {
           err.textContent = String(e && e.message ? e.message : e);
         } finally {
