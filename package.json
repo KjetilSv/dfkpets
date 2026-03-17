@@ -4,7 +4,8 @@
   "description": "DeFi Kingdoms Pet Leaderboard — odd & very odd tracker",
   "scripts": {
     "owner": "tsx src/cli.ts owner",
-    "leaderboard": "tsx src/cli.ts leaderboard"
+    "leaderboard": "tsx src/cli.ts leaderboard",
+    "web": "tsx src/server.ts"
   },
   "dependencies": {
     "cross-fetch": "^4.0.0"

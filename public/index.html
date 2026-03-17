@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DFK Pet Odd / Very Odd checker</title>
+    <style>
+      :root { color-scheme: dark; }
+      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 0; background:#0b0e14; color:#e8eefc; }
+      .wrap { max-width: 720px; margin: 0 auto; padding: 16px; }
+      h1 { font-size: 20px; margin: 8px 0 16px; }
+      .card { background:#121826; border:1px solid #22304a; border-radius: 12px; padding: 14px; }
+      input { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #2a3a5d; background:#0b1020; color:#e8eefc; font-size: 16px; box-sizing: border-box; }
+      button { width: 100%; margin-top: 10px; padding: 12px; border-radius: 10px; border: 0; background:#4f7cff; color:#081022; font-weight: 700; font-size: 16px; }
+      button:disabled { opacity: 0.6; }
+      .row { display:flex; justify-content: space-between; padding: 10px 0; border-bottom:1px solid #22304a; }
+      .row:last-child { border-bottom:0; }
+      .k { opacity: 0.8; }
+      .v { font-variant-numeric: tabular-nums; font-weight: 700; }
+      .err { margin-top: 10px; color:#ff7b7b; white-space: pre-wrap; }
+      .hint { opacity:0.7; font-size: 13px; margin-top:10px; }
+      code { background: #0b1020; padding: 2px 6px; border-radius: 8px; border: 1px solid #22304a; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1>DFK Pets — Odd / Very Odd</h1>
+      <div class="card">
+        <input id="addr" placeholder="0x..." autocomplete="off" autocapitalize="off" spellcheck="false" />
+        <button id="btn">Check</button>
+        <div id="out" style="margin-top:12px;"></div>
+        <div id="err" class="err"></div>
+        <div class="hint">
+          Uses <code>pool=1</code> (Odd) and <code>pool=2</code> (Very Odd) from <code>https://api.defikingdoms.com/graphql</code>.
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const $ = (id) => document.getElementById(id);
+      const btn = $("btn");
+      const addr = $("addr");
+      const out = $("out");
+      const err = $("err");
+
+      function render(address, counts) {
+        out.innerHTML = `
+          <div class="row"><div class="k">Address</div><div class="v" style="font-size:12px; max-width:55%; overflow:hidden; text-overflow:ellipsis;">${address}</div></div>
+          <div class="row"><div class="k">Odd (pool=1)</div><div class="v">${counts.odd}</div></div>
+          <div class="row"><div class="k">Very Odd (pool=2)</div><div class="v">${counts.veryOdd}</div></div>
+        `;
+      }
+
+      async function run() {
+        err.textContent = "";
+        out.innerHTML = "";
+        const a = addr.value.trim();
+        if (!/^0x[0-9a-fA-F]{40}$/.test(a)) {
+          err.textContent = "Invalid address";
+          return;
+        }
+        btn.disabled = true;
+        btn.textContent = "Checking…";
+        try {
+          const r = await fetch(`/api/owner?address=${encodeURIComponent(a)}`);
+          const j = await r.json();
+          if (!r.ok) throw new Error(j.error || `HTTP ${r.status}`);
+          render(j.address, j.counts);
+        } catch (e) {
+          err.textContent = String(e && e.message ? e.message : e);
+        } finally {
+          btn.disabled = false;
+          btn.textContent = "Check";
+        }
+      }
+
+      btn.addEventListener("click", run);
+      addr.addEventListener("keydown", (e) => { if (e.key === "Enter") run(); });
+
+      // Prefill with a small test wallet
+      addr.value = "0x039357eeca5ab893ad3f05ee0653e30025068929";
+    </script>
+  </body>
+</html>
