@@ -44,11 +44,20 @@
       const err = $("err");
 
       function petRow(p) {
+        const burned = (p.name || '').toLowerCase().startsWith('unrevealed');
         return `
           <div style="display:flex; gap:10px; align-items:center; padding:8px 0; border-bottom:1px solid #22304a;">
-            <img src="${p.iconUrl}" alt="" width="40" height="40" style="border-radius:10px; background:#0b1020; border:1px solid #22304a;" />
+            <div style="position:relative; width:40px; height:40px; flex:0 0 40px;">
+              <img src="${p.iconUrl}" alt="" width="40" height="40" style="border-radius:10px; background:#0b1020; border:1px solid #22304a; display:block;" />
+              ${burned ? `
+                <div style="position:absolute; inset:0; border-radius:10px; pointer-events:none;">
+                  <div style="position:absolute; left:4px; right:4px; top:19px; height:3px; background:#ff4b4b; transform:rotate(45deg); transform-origin:center;"></div>
+                  <div style="position:absolute; left:4px; right:4px; top:19px; height:3px; background:#ff4b4b; transform:rotate(-45deg); transform-origin:center;"></div>
+                </div>
+              ` : ''}
+            </div>
             <div style="flex:1; min-width:0;">
-              <div class="v" style="font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${p.name}</div>
+              <div class="v" style="font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${p.name}${burned ? ' (burned)' : ''}</div>
               <div class="k" style="font-size:12px;">ID: ${p.id}</div>
             </div>
           </div>
