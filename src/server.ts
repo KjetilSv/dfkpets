@@ -7,8 +7,8 @@ import { POOL_GROUP } from "./config.js";
 import { PetLite, RawPet } from "./types.js";
 
 function petIconUrl(id: string) {
-  // works (200) for e.g. https://game.defikingdoms.com/pets/7.png
-  return `https://game.defikingdoms.com/pets/${id}.png`;
+  // preferred public image host
+  return `https://pets.defikingdoms.com/image/${id}`;
 }
 
 function toPetLite(p: RawPet): PetLite {
