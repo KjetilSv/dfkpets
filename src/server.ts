@@ -5,6 +5,7 @@ import { getCountsByOwner } from "./leaderboard.js";
 import { fetchPetsByOwner } from "./graphql.js";
 import { POOL_GROUP } from "./config.js";
 import { PetLite, RawPet } from "./types.js";
+import { getGlobalTotals } from "./totals.js";
 
 function petIconUrl(id: string) {
   // preferred public image host
@@ -23,6 +24,13 @@ const PORT = Number(process.env.PORT ?? 8080);
 const HOST = process.env.HOST ?? "0.0.0.0"; // LAN
 
 const indexHtml = readFileSync(new URL("../public/index.html", import.meta.url), "utf8");
+
+// cache global totals (fetch once on boot; can be refreshed later)
+let totalsPromise: Promise<{ oddTotal: number; veryOddTotal: number }> | null = null;
+function getTotalsCached() {
+  if (!totalsPromise) totalsPromise = getGlobalTotals();
+  return totalsPromise;
+}
 
 function send(res: http.ServerResponse, code: number, body: string, type = "text/plain") {
   res.statusCode = code;
@@ -45,9 +53,10 @@ const server = http.createServer(async (req, res) => {
         return send(res, 400, JSON.stringify({ error: "Invalid address" }), "application/json");
       }
 
-      const [counts, pets] = await Promise.all([
+      const [counts, pets, totals] = await Promise.all([
         getCountsByOwner(address),
         fetchPetsByOwner(address),
+        getTotalsCached(),
       ]);
 
       const oddPets: PetLite[] = [];
@@ -65,6 +74,7 @@ const server = http.createServer(async (req, res) => {
         JSON.stringify({
           address: address.toLowerCase(),
           counts,
+          totals,
           oddPets,
           veryOddPets,
         }),
