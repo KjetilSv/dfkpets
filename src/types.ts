@@ -1,11 +1,18 @@
 export interface RawPet {
   id: string;
   pool: string | number;
+  name?: string;
   background: string | number;
   appearance?: string | number;
   rarity?: string | number;
   salePrice?: string;
   owner?: { name?: string; id?: string };
+}
+
+export interface PetLite {
+  id: string;
+  name: string;
+  iconUrl: string;
 }
 
 export type RarityGroup = "odd" | "veryOdd";

@@ -2,6 +2,22 @@ import http from "node:http";
 import { readFileSync } from "node:fs";
 import { URL } from "node:url";
 import { getCountsByOwner } from "./leaderboard.js";
+import { fetchPetsByOwner } from "./graphql.js";
+import { POOL_GROUP } from "./config.js";
+import { PetLite, RawPet } from "./types.js";
+
+function petIconUrl(id: string) {
+  // works (200) for e.g. https://game.defikingdoms.com/pets/7.png
+  return `https://game.defikingdoms.com/pets/${id}.png`;
+}
+
+function toPetLite(p: RawPet): PetLite {
+  return {
+    id: p.id,
+    name: (p.name ?? "").trim() || `Pet #${p.id}`,
+    iconUrl: petIconUrl(p.id),
+  };
+}
 
 const PORT = Number(process.env.PORT ?? 8080);
 const HOST = process.env.HOST ?? "0.0.0.0"; // LAN
@@ -29,11 +45,29 @@ const server = http.createServer(async (req, res) => {
         return send(res, 400, JSON.stringify({ error: "Invalid address" }), "application/json");
       }
 
-      const counts = await getCountsByOwner(address);
+      const [counts, pets] = await Promise.all([
+        getCountsByOwner(address),
+        fetchPetsByOwner(address),
+      ]);
+
+      const oddPets: PetLite[] = [];
+      const veryOddPets: PetLite[] = [];
+
+      for (const p of pets) {
+        const group = POOL_GROUP[Number(p.pool)];
+        if (group === "odd") oddPets.push(toPetLite(p));
+        if (group === "veryOdd") veryOddPets.push(toPetLite(p));
+      }
+
       return send(
         res,
         200,
-        JSON.stringify({ address: address.toLowerCase(), counts }),
+        JSON.stringify({
+          address: address.toLowerCase(),
+          counts,
+          oddPets,
+          veryOddPets,
+        }),
         "application/json"
       );
     }

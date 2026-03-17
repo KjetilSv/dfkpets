@@ -43,11 +43,29 @@
       const out = $("out");
       const err = $("err");
 
-      function render(address, counts) {
+      function petRow(p) {
+        return `
+          <div style="display:flex; gap:10px; align-items:center; padding:8px 0; border-bottom:1px solid #22304a;">
+            <img src="${p.iconUrl}" alt="" width="40" height="40" style="border-radius:10px; background:#0b1020; border:1px solid #22304a;" />
+            <div style="flex:1; min-width:0;">
+              <div class="v" style="font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${p.name}</div>
+              <div class="k" style="font-size:12px;">ID: ${p.id}</div>
+            </div>
+          </div>
+        `;
+      }
+
+      function render(address, counts, oddPets, veryOddPets) {
         out.innerHTML = `
           <div class="row"><div class="k">Address</div><div class="v" style="font-size:12px; max-width:55%; overflow:hidden; text-overflow:ellipsis;">${address}</div></div>
           <div class="row"><div class="k">Odd (pool=1)</div><div class="v">${counts.odd}</div></div>
+          <div style="margin:10px 0 14px;">
+            ${(oddPets || []).map(petRow).join("") || '<div class="k">(ingen)</div>'}
+          </div>
           <div class="row"><div class="k">Very Odd (pool=2)</div><div class="v">${counts.veryOdd}</div></div>
+          <div style="margin:10px 0 4px;">
+            ${(veryOddPets || []).map(petRow).join("") || '<div class="k">(ingen)</div>'}
+          </div>
         `;
       }
 
@@ -65,7 +83,7 @@
           const r = await fetch(`/api/owner?address=${encodeURIComponent(a)}`);
           const j = await r.json();
           if (!r.ok) throw new Error(j.error || `HTTP ${r.status}`);
-          render(j.address, j.counts);
+          render(j.address, j.counts, j.oddPets, j.veryOddPets);
         } catch (e) {
           err.textContent = String(e && e.message ? e.message : e);
         } finally {
