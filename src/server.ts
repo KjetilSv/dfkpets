@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { URL } from "node:url";
 import { getCountsByOwner } from "./leaderboard.js";
 
-const PORT = Number(process.env.PORT ?? 5177);
+const PORT = Number(process.env.PORT ?? 8080);
 const HOST = process.env.HOST ?? "0.0.0.0"; // LAN
 
 const indexHtml = readFileSync(new URL("../public/index.html", import.meta.url), "utf8");
