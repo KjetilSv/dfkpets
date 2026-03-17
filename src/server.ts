@@ -7,6 +7,7 @@ import { POOL_GROUP } from "./config.js";
 import { PetLite, RawPet } from "./types.js";
 import { getGlobalTotals } from "./totals.js";
 import { getPetDisplayName, mapLimit } from "./rpcPets.js";
+import { getOddUltraIndex } from "./petMeta.js";
 
 function petIconUrl(id: string) {
   // preferred public image host
@@ -55,11 +56,12 @@ const server = http.createServer(async (req, res) => {
         return send(res, 400, JSON.stringify({ error: "Invalid address" }), "application/json");
       }
 
-      const [counts, pets, totals, profileName] = await Promise.all([
+      const [counts, pets, totals, profileName, oddUltra] = await Promise.all([
         getCountsByOwner(address),
         fetchPetsByOwner(address),
         getTotalsCached(),
         fetchProfileName(address),
+        getOddUltraIndex(),
       ]);
 
       let oddPets: PetLite[] = [];
@@ -90,6 +92,7 @@ const server = http.createServer(async (req, res) => {
           displayName: profileName,
           counts,
           totals,
+          oddUltraUniqueTotals: oddUltra.uniqueAppearanceIds,
           oddPets,
           veryOddPets,
         }),

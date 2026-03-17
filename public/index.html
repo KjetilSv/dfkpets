@@ -65,8 +65,14 @@
       }
 
       function render(address, displayName, counts, totals, oddPets, veryOddPets) {
-        const oddTotal = totals && typeof totals.oddTotal === 'number' ? totals.oddTotal : null;
-        const veryOddTotal = totals && typeof totals.veryOddTotal === 'number' ? totals.veryOddTotal : null;
+        // Prefer unique totals from local json tables (appearanceId uniques)
+        const oddTotal = (window.__oddUltraUniqueTotals && typeof window.__oddUltraUniqueTotals.odd === 'number')
+          ? window.__oddUltraUniqueTotals.odd
+          : (totals && typeof totals.oddTotal === 'number' ? totals.oddTotal : null);
+
+        const veryOddTotal = (window.__oddUltraUniqueTotals && typeof window.__oddUltraUniqueTotals.ultraOdd === 'number')
+          ? window.__oddUltraUniqueTotals.ultraOdd
+          : (totals && typeof totals.veryOddTotal === 'number' ? totals.veryOddTotal : null);
         const oddLabel = oddTotal != null ? `${counts.odd}/${oddTotal}` : `${counts.odd}`;
         const veryOddLabel = veryOddTotal != null ? `${counts.veryOdd}/${veryOddTotal}` : `${counts.veryOdd}`;
 
@@ -98,6 +104,7 @@
           const r = await fetch(`/api/owner?address=${encodeURIComponent(a)}`);
           const j = await r.json();
           if (!r.ok) throw new Error(j.error || `HTTP ${r.status}`);
+          window.__oddUltraUniqueTotals = j.oddUltraUniqueTotals || null;
           render(j.address, j.displayName, j.counts, j.totals, j.oddPets, j.veryOddPets);
         } catch (e) {
           err.textContent = String(e && e.message ? e.message : e);
