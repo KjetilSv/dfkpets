@@ -105,8 +105,8 @@ const server = http.createServer(async (req, res) => {
           oddUltraUniqueTotals: oddUltra.uniqueAppearanceIds,
           oddPets,
           veryOddPets,
-          ownedUniqueOdd: [...new Set(ownedInfos.filter(i => POOL_GROUP[Number(pets.find(p=>p.id===i.id)?.pool)] === "odd").map(i => i.appearance))].length,
-          ownedUniqueVeryOdd: [...new Set(ownedInfos.filter(i => POOL_GROUP[Number(pets.find(p=>p.id===i.id)?.pool)] === "veryOdd").map(i => i.appearance))].length,
+          ownedUniqueOdd: Math.min([...new Set(ownedInfos.filter(i => POOL_GROUP[Number(pets.find(p=>p.id===i.id)?.pool)] === "odd").map(i => i.appearance))].length, oddUltra.uniqueAppearanceIds.odd),
+          ownedUniqueVeryOdd: Math.min([...new Set(ownedInfos.filter(i => POOL_GROUP[Number(pets.find(p=>p.id===i.id)?.pool)] === "veryOdd").map(i => i.appearance))].length, oddUltra.uniqueAppearanceIds.ultraOdd),
         }),
         "application/json"
       );
