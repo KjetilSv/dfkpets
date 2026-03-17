@@ -1,0 +1,1 @@
+﻿{"query":"query($id: ID!) { pet(id:$id) { id name appearance background pool } }","variables":{"id":"7"}}

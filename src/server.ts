@@ -6,6 +6,7 @@ import { fetchPetsByOwner, fetchProfileName } from "./graphql.js";
 import { POOL_GROUP } from "./config.js";
 import { PetLite, RawPet } from "./types.js";
 import { getGlobalTotals } from "./totals.js";
+import { getPetDisplayName, mapLimit } from "./rpcPets.js";
 
 function petIconUrl(id: string) {
   // preferred public image host
@@ -15,6 +16,7 @@ function petIconUrl(id: string) {
 function toPetLite(p: RawPet): PetLite {
   return {
     id: p.id,
+    // GraphQL pet.name seems often empty; we replace it later via on-chain lookup.
     name: (p.name ?? "").trim() || `Pet #${p.id}`,
     iconUrl: petIconUrl(p.id),
   };
@@ -60,14 +62,25 @@ const server = http.createServer(async (req, res) => {
         fetchProfileName(address),
       ]);
 
-      const oddPets: PetLite[] = [];
-      const veryOddPets: PetLite[] = [];
+      let oddPets: PetLite[] = [];
+      let veryOddPets: PetLite[] = [];
 
       for (const p of pets) {
         const group = POOL_GROUP[Number(p.pool)];
         if (group === "odd") oddPets.push(toPetLite(p));
         if (group === "veryOdd") veryOddPets.push(toPetLite(p));
       }
+
+      // Replace placeholder names with on-chain display names (best-effort, cached)
+      // Concurrency limited to avoid hammering the RPC.
+      oddPets = await mapLimit(oddPets, 6, async (pet) => ({
+        ...pet,
+        name: await getPetDisplayName(pet.id),
+      }));
+      veryOddPets = await mapLimit(veryOddPets, 6, async (pet) => ({
+        ...pet,
+        name: await getPetDisplayName(pet.id),
+      }));
 
       return send(
         res,

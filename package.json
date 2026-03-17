@@ -8,7 +8,8 @@
     "web": "tsx src/server.ts"
   },
   "dependencies": {
-    "cross-fetch": "^4.0.0"
+    "cross-fetch": "^4.0.0",
+    "ethers": "^6.13.0"
   },
   "devDependencies": {
     "tsx": "^4.7.0",
