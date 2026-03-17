@@ -243,7 +243,7 @@
           lbLoaded = true;
 
           const age = j.ageSeconds != null
-            ? `<span style="opacity:.5;font-size:12px;"> · cached ${Math.floor(j.ageSeconds/60)}m ago</span>`
+            ? `<span style="opacity:.5;font-size:12px;"> · updated ${j.ageSeconds < 3600 ? Math.floor(j.ageSeconds/60)+'m' : Math.floor(j.ageSeconds/3600)+'h'} ago</span>`
             : '';
 
           const rows = (j.entries || []).map((e, i) => {
@@ -268,7 +268,7 @@
           el.innerHTML = `
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
               <div class="k" style="font-size:12px;">${j.entries.length} collectors${age}</div>
-              <button onclick="loadLeaderboard(true)" style="width:auto; padding:6px 12px; font-size:12px; margin:0;">↻ Refresh</button>
+              <button onclick="loadLeaderboard(true)" style="width:auto; padding:6px 12px; font-size:12px; margin:0;" title="Force rebuild (takes ~30s)">↻ Force rebuild</button>
             </div>
             <div style="display:flex; justify-content:flex-end; gap:16px; margin-bottom:6px; font-size:12px; opacity:.6;">
               <span>⚡ Ultra Odd</span><span>🎯 Odd</span>

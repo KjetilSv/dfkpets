@@ -129,7 +129,7 @@ export async function buildLeaderboard(): Promise<LeaderboardEntry[]> {
 
 // In-memory cache
 let cache: { entries: LeaderboardEntry[]; builtAt: number } | null = null;
-const TTL_MS = 30 * 60 * 1000; // 30 min
+const TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 export async function getLeaderboard(force = false): Promise<LeaderboardEntry[]> {
   if (!force && cache && Date.now() - cache.builtAt < TTL_MS) {
