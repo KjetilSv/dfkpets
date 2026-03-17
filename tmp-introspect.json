@@ -1,1 +1,0 @@
-﻿{"query":"query { __type(name:\"Pet\") { name fields { name type { kind name ofType { kind name } } } } }"}
