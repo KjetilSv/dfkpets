@@ -20,6 +20,7 @@ const petCore = new Contract(PETCORE_DFKCHAIN, ABI, provider);
 import { resolveAppearanceDisplay } from "./petMeta.js";
 
 const nameCache = new Map<string, string>();
+const petInfoCache = new Map<string, { eggType: number; appearance: number }>();
 
 function fallbackName(id: string) {
   return `Pet #${id}`;
@@ -61,15 +62,21 @@ function buildDisplayName(
   return variant ? `${base} (${variant})` : base;
 }
 
+/** Fetch basic pet info from chain (cached): eggType + appearance */
+export async function getPetInfo(petId: string): Promise<{ eggType: number; appearance: number }> {
+  if (petInfoCache.has(petId)) return petInfoCache.get(petId)!;
+  const pet = await petCore.getPetV2(BigInt(petId));
+  const info = { eggType: Number(pet?.eggType), appearance: Number(pet?.appearance) };
+  petInfoCache.set(petId, info);
+  return info;
+}
+
 /** Resolves a nice pet display name using Appearance/Family/Variant tables (cached). */
 export async function getPetDisplayName(petId: string): Promise<string> {
   if (nameCache.has(petId)) return nameCache.get(petId)!;
 
   try {
-    const pet = await petCore.getPetV2(BigInt(petId));
-
-    const eggType = Number(pet?.eggType);
-    const appearance = Number(pet?.appearance);
+    const { eggType, appearance } = await getPetInfo(petId);
 
     const meta = await resolveAppearanceDisplay(eggType, appearance);
     const name = buildDisplayName(

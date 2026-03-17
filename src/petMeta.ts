@@ -100,6 +100,15 @@ export interface OddUltraIndex {
   };
 }
 
+export interface AppearanceType {
+  appearanceId: number;
+  displayName: string;
+  variant: string;
+  family: string;
+  eggType: number;
+  pool: "Odd" | "Ultra Odd";
+}
+
 /**
  * Builds lists of Odd / Ultra Odd appearances from the local JSON tables.
  * Also computes UNIQUE counts based on appearanceId (across all egg types).
@@ -138,4 +147,48 @@ export async function getOddUltraIndex(): Promise<OddUltraIndex> {
       ultraOdd: ultraIds.size,
     },
   };
+}
+
+/**
+ * Unique list of Odd/Ultra Odd types (one entry per appearanceId).
+ * If multiple egg types share the same appearanceId, first seen wins.
+ */
+export async function getOddUltraTypesUnique(): Promise<{ odd: AppearanceType[]; ultraOdd: AppearanceType[] }> {
+  const meta = await loadPetMeta();
+
+  const oddMap = new Map<number, AppearanceType>();
+  const ultraMap = new Map<number, AppearanceType>();
+
+  for (const [eggType, m] of meta.entries()) {
+    for (const e of m.values()) {
+      if (e.pool === "Odd") {
+        if (!oddMap.has(e.appearanceId)) {
+          oddMap.set(e.appearanceId, {
+            appearanceId: e.appearanceId,
+            displayName: e.displayName,
+            variant: e.variant,
+            family: e.family,
+            eggType,
+            pool: "Odd",
+          });
+        }
+      }
+      if (e.pool === "Ultra Odd") {
+        if (!ultraMap.has(e.appearanceId)) {
+          ultraMap.set(e.appearanceId, {
+            appearanceId: e.appearanceId,
+            displayName: e.displayName,
+            variant: e.variant,
+            family: e.family,
+            eggType,
+            pool: "Ultra Odd",
+          });
+        }
+      }
+    }
+  }
+
+  const odd = [...oddMap.values()].sort((a, b) => a.appearanceId - b.appearanceId);
+  const ultraOdd = [...ultraMap.values()].sort((a, b) => a.appearanceId - b.appearanceId);
+  return { odd, ultraOdd };
 }

@@ -6,8 +6,8 @@ import { fetchPetsByOwner, fetchProfileName } from "./graphql.js";
 import { POOL_GROUP } from "./config.js";
 import { PetLite, RawPet } from "./types.js";
 import { getGlobalTotals } from "./totals.js";
-import { getPetDisplayName, mapLimit } from "./rpcPets.js";
-import { getOddUltraIndex } from "./petMeta.js";
+import { getPetDisplayName, getPetInfo, mapLimit } from "./rpcPets.js";
+import { getOddUltraIndex, getOddUltraTypesUnique } from "./petMeta.js";
 
 function petIconUrl(id: string) {
   // preferred public image host
@@ -73,8 +73,7 @@ const server = http.createServer(async (req, res) => {
         if (group === "veryOdd") veryOddPets.push(toPetLite(p));
       }
 
-      // Replace placeholder names with on-chain display names (best-effort, cached)
-      // Concurrency limited to avoid hammering the RPC.
+      // Replace placeholder names with derived display names (cached)
       oddPets = await mapLimit(oddPets, 6, async (pet) => ({
         ...pet,
         name: await getPetDisplayName(pet.id),
@@ -95,6 +94,59 @@ const server = http.createServer(async (req, res) => {
           oddUltraUniqueTotals: oddUltra.uniqueAppearanceIds,
           oddPets,
           veryOddPets,
+        }),
+        "application/json"
+      );
+    }
+
+    if (url.pathname === "/api/catalog") {
+      const address = (url.searchParams.get("address") ?? "").trim();
+      if (!/^0x[0-9a-fA-F]{40}$/.test(address)) {
+        return send(res, 400, JSON.stringify({ error: "Invalid address" }), "application/json");
+      }
+
+      const [pets, types] = await Promise.all([
+        fetchPetsByOwner(address),
+        getOddUltraTypesUnique(),
+      ]);
+
+      // owned appearanceIds by pool group
+      const ownedOdd = new Set<number>();
+      const ownedUltra = new Set<number>();
+
+      // only check pets that are pool 1/2 (odd/veryOdd)
+      const relevant = pets.filter((p) => {
+        const g = POOL_GROUP[Number(p.pool)];
+        return g === "odd" || g === "veryOdd";
+      });
+
+      const infos = await mapLimit(relevant, 6, async (p) => ({
+        pool: Number(p.pool),
+        ...(await getPetInfo(p.id)),
+      }));
+
+      for (const info of infos) {
+        const group = POOL_GROUP[Number(info.pool)];
+        if (group === "odd") ownedOdd.add(info.appearance);
+        if (group === "veryOdd") ownedUltra.add(info.appearance);
+      }
+
+      const odd = types.odd.map((t) => ({
+        ...t,
+        owned: ownedOdd.has(t.appearanceId),
+      }));
+      const ultraOdd = types.ultraOdd.map((t) => ({
+        ...t,
+        owned: ownedUltra.has(t.appearanceId),
+      }));
+
+      return send(
+        res,
+        200,
+        JSON.stringify({
+          address: address.toLowerCase(),
+          odd,
+          ultraOdd,
         }),
         "application/json"
       );
