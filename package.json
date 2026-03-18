@@ -1,19 +1,14 @@
 {
-  "name": "dfk-pet-leaderboard",
+  "name": "dfkpets-pages",
   "version": "1.0.0",
-  "description": "DeFi Kingdoms Pet Leaderboard — odd & very odd tracker",
+  "private": true,
+  "description": "Odd Pet Hunter (DFK pets) — Cloudflare Pages app",
   "scripts": {
-    "owner": "tsx src/cli.ts owner",
-    "leaderboard": "tsx src/cli.ts leaderboard",
-    "web": "tsx src/server.ts"
-  },
-  "dependencies": {
-    "cross-fetch": "^4.0.0",
-    "ethers": "^6.13.0"
+    "dev": "wrangler pages dev public --compatibility-date=2024-10-01",
+    "build": "echo 'no build'"
   },
   "devDependencies": {
-    "tsx": "^4.7.0",
-    "typescript": "^5.4.0",
-    "@types/node": "^20.0.0"
+    "wrangler": "^3.114.0",
+    "@cloudflare/workers-types": "^4.20250306.0"
   }
 }
