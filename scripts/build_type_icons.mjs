@@ -40,7 +40,24 @@ const SAMPLE_QUERY = `
   }
 `;
 
-// Fetch sample pet ids in chunks (GraphQL input size safety)
+const SINGLE_QUERY = `
+  query($appearance: Int!) {
+    pets(first: 1, where: { appearance: $appearance }) {
+      id
+      appearance
+    }
+  }
+`;
+
+async function download(url) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('Download HTTP ' + res.status);
+  return Buffer.from(await res.arrayBuffer());
+}
+
+await fs.mkdir(OUT_DIR, { recursive: true });
+
+// Fetch samples in chunks (fast path)
 const sample = new Map();
 const CHUNK = 80;
 for (let i=0; i<appearanceIds.length; i+=CHUNK) {
@@ -50,30 +67,28 @@ for (let i=0; i<appearanceIds.length; i+=CHUNK) {
     const app = Number(p.appearance);
     if (!sample.has(app)) sample.set(app, p.id);
   }
-  console.log('chunk', i/CHUNK+1, 'got', (data.pets||[]).length, 'samples', sample.size);
 }
 
-await fs.mkdir(OUT_DIR, { recursive: true });
-
-async function download(url) {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error('Download HTTP ' + res.status);
-  const buf = Buffer.from(await res.arrayBuffer());
-  return buf;
+// Retry per appearanceId for any missing (covers cases where first:1000 misses some)
+for (const appId of appearanceIds) {
+  if (sample.has(appId)) continue;
+  const data = await gql(SINGLE_QUERY, { appearance: appId });
+  const p = (data.pets || [])[0];
+  if (p?.id) sample.set(appId, p.id);
 }
 
-let ok = 0, missing = 0;
+let ok = 0, missing = 0, skipped = 0;
 for (const appId of appearanceIds) {
   const petId = sample.get(appId);
   if (!petId) {
-    console.log('NO SAMPLE for appearanceId', appId);
     missing++;
     continue;
   }
   const out = path.join(OUT_DIR, `${appId}.png`);
   try {
     await fs.access(out);
-    continue; // already exists
+    skipped++;
+    continue;
   } catch {}
 
   const url = `https://pets.defikingdoms.com/image/${petId}`;
@@ -82,4 +97,4 @@ for (const appId of appearanceIds) {
   ok++;
 }
 
-console.log(JSON.stringify({ downloaded: ok, missing }));
+console.log(JSON.stringify({ downloaded: ok, skipped, missing }));
