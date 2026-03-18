@@ -267,7 +267,10 @@
           <div style="margin-bottom:10px;">
             <div class="k" style="font-size:13px; margin-bottom:6px;">Missing ${label} (${items.length})</div>
             <div style="display:flex; flex-wrap:wrap; gap:6px;">
-              ${items.map(t => `<div style="background:#0b1020; border:1px solid #22304a; border-radius:8px; padding:4px 8px; font-size:12px; opacity:.7;">${t.displayName}${t.variant ? ' ('+t.variant+')' : ''}</div>`).join('')}
+              ${items.map(t => {
+                const big = (t.path || '').toLowerCase().includes('bigblub') ? ' — BigBlub' : '';
+                return `<div style="background:#0b1020; border:1px solid #22304a; border-radius:8px; padding:4px 8px; font-size:12px; opacity:.7;">${t.displayName}${t.variant ? ' ('+t.variant+')' : ''}${big}</div>`;
+              }).join('')}
             </div>
           </div>`;
         $('out-missing').innerHTML = `
