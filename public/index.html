@@ -18,51 +18,67 @@
       .k { opacity: 0.8; }
       .v { font-variant-numeric: tabular-nums; font-weight: 700; }
       .err { margin-top: 10px; color:#ff7b7b; white-space: pre-wrap; }
-      .hint { opacity:0.7; font-size: 13px; margin-top:10px; }
-      code { background: #0b1020; padding: 2px 6px; border-radius: 8px; border: 1px solid #22304a; }
+
       .progress-bar-wrap { background:#1a2540; border-radius:6px; height:8px; margin:4px 0 10px; overflow:hidden; }
       .progress-bar-fill { height:100%; border-radius:6px; background:#4f7cff; transition:width .3s; }
-      .tabs { display:flex; gap:4px; margin: 14px 0 0; }
-      .tab-btn { flex:1; padding: 10px; border-radius: 10px 10px 0 0; border:1px solid #22304a; border-bottom: none; background:#0d1521; color:#e8eefc; font-size: 15px; font-weight: 600; cursor:pointer; opacity: 0.6; }
+
+      /* Tabs */
+      .tabs { display:flex; gap:6px; margin: 14px 0 0; }
+      .tab-btn { flex:1; padding: 10px; border-radius: 10px; border:1px solid #22304a; background:#0d1521; color:#e8eefc; font-size: 15px; font-weight: 700; cursor:pointer; opacity: 0.65; }
       .tab-btn.active { background:#121826; opacity: 1; }
       .tab-panel { display:none; }
       .tab-panel.active { display:block; }
-      .panel-wrap { background:#121826; border:1px solid #22304a; border-radius: 0 0 12px 12px; padding: 14px; }
+      .panel-wrap { background:#121826; border:1px solid #22304a; border-radius: 12px; padding: 14px; margin-top:10px; }
+
+      .subtabs { display:flex; gap:4px; margin: 10px 0 0; }
+      .subtab-btn { flex:1; padding: 10px; border-radius: 10px 10px 0 0; border:1px solid #22304a; border-bottom: none; background:#0d1521; color:#e8eefc; font-size: 14px; font-weight: 700; cursor:pointer; opacity: 0.6; }
+      .subtab-btn.active { background:#121826; opacity: 1; }
+      .subpanel { display:none; }
+      .subpanel.active { display:block; }
+      .subpanel-wrap { background:#121826; border:1px solid #22304a; border-radius: 0 0 12px 12px; padding: 14px; }
     </style>
   </head>
   <body>
     <div class="wrap">
       <h1>Odd Pet Hunter 🐾</h1>
       <div style="opacity:0.6; font-size:13px; margin:-10px 0 14px;">A DFK pet tracker for the true collectors</div>
-      <div class="card">
-        <input id="addr" placeholder="0x..." autocomplete="off" autocapitalize="off" spellcheck="false" />
-        <button id="btn">Check</button>
-        <div id="err" class="err"></div>
+
+      <!-- TOP LEVEL TABS -->
+      <div class="tabs">
+        <button class="tab-btn active" data-top="leaderboard">🏆 Leaderboard</button>
+        <button class="tab-btn" data-top="wallet">🎒 Wallet</button>
       </div>
 
-      <div id="result-area" style="display:block; margin-top:4px;">
-        <div class="tabs">
-          <button class="tab-btn" data-tab="wallet">🎒 Wallet</button>
-          <button class="tab-btn" data-tab="catalog">📖 All types</button>
-          <button class="tab-btn active" data-tab="leaderboard">🏆 Board</button>
-          <button class="tab-btn" data-tab="stats">📊 Stats</button>
+      <!-- LEADERBOARD PANEL -->
+      <div class="tab-panel active panel-wrap" id="top-leaderboard">
+        <div id="out-leaderboard"><div class="k" style="padding:12px 0;">Loading leaderboard…</div></div>
+      </div>
+
+      <!-- WALLET PANEL -->
+      <div class="tab-panel panel-wrap" id="top-wallet">
+        <div class="card">
+          <input id="addr" placeholder="0x..." autocomplete="off" autocapitalize="off" spellcheck="false" />
+          <button id="btn">Check</button>
+          <div id="err" class="err"></div>
         </div>
 
-        <div class="tab-panel panel-wrap" id="tab-wallet">
+        <div class="subtabs">
+          <button class="subtab-btn active" data-sub="user">👤 User wallet</button>
+          <button class="subtab-btn" data-sub="types">📖 All types</button>
+          <button class="subtab-btn" data-sub="stats">📊 Stats</button>
+        </div>
+
+        <div class="subpanel active subpanel-wrap" id="sub-user">
           <div id="out-wallet"></div>
           <div id="out-gallery" style="margin-top:14px;"></div>
           <div id="out-missing" style="margin-top:14px;"></div>
         </div>
 
-        <div class="tab-panel panel-wrap" id="tab-catalog">
+        <div class="subpanel subpanel-wrap" id="sub-types">
           <div id="out-catalog"></div>
         </div>
 
-        <div class="tab-panel active panel-wrap" id="tab-leaderboard">
-          <div id="out-leaderboard"><div class="k" style="padding:12px 0;">Click to load leaderboard…</div></div>
-        </div>
-
-        <div class="tab-panel panel-wrap" id="tab-stats">
+        <div class="subpanel subpanel-wrap" id="sub-stats">
           <div id="out-stats"><div class="k" style="padding:12px 0;">Click to load stats…</div></div>
         </div>
       </div>
@@ -70,26 +86,45 @@
 
     <script>
       const $ = (id) => document.getElementById(id);
-      const btn = $("btn");
+
       const addr = $("addr");
+      const btn = $("btn");
+      const err = $("err");
       const outWallet = $("out-wallet");
       const outCatalog = $("out-catalog");
-      const err = $("err");
-      const resultArea = $("result-area");
 
-      // Tabs
-      let lbLoaded = false, statsLoaded = false;
+      // --------------------
+      // TOP TABS
+      // --------------------
+      function activateTop(tab) {
+        document.querySelectorAll('.tab-btn').forEach(x => x.classList.remove('active'));
+        document.querySelectorAll('.tab-panel').forEach(x => x.classList.remove('active'));
+        document.querySelector(`.tab-btn[data-top="${tab}"]`).classList.add('active');
+        $("top-" + tab).classList.add('active');
+      }
       document.querySelectorAll('.tab-btn').forEach(b => {
+        b.addEventListener('click', () => activateTop(b.dataset.top));
+      });
+
+      // --------------------
+      // SUB TABS (inside wallet)
+      // --------------------
+      function activateSub(tab) {
+        document.querySelectorAll('.subtab-btn').forEach(x => x.classList.remove('active'));
+        document.querySelectorAll('.subpanel').forEach(x => x.classList.remove('active'));
+        document.querySelector(`.subtab-btn[data-sub="${tab}"]`).classList.add('active');
+        $("sub-" + tab).classList.add('active');
+      }
+      document.querySelectorAll('.subtab-btn').forEach(b => {
         b.addEventListener('click', () => {
-          document.querySelectorAll('.tab-btn').forEach(x => x.classList.remove('active'));
-          document.querySelectorAll('.tab-panel').forEach(x => x.classList.remove('active'));
-          b.classList.add('active');
-          $('tab-' + b.dataset.tab).classList.add('active');
-          if (b.dataset.tab === 'leaderboard' && !lbLoaded) loadLeaderboard();
-          if (b.dataset.tab === 'stats' && !statsLoaded) loadStats();
+          activateSub(b.dataset.sub);
+          if (b.dataset.sub === 'stats') loadStats();
         });
       });
 
+      // --------------------
+      // UI helpers
+      // --------------------
       function petRow(p) {
         const burned = (p.name || '').toLowerCase().startsWith('unrevealed');
         return `
@@ -118,20 +153,19 @@
             <span class="k">${owned} unique / ${total} types</span>
             <span class="v">${pct}%</span>
           </div>
-          <div class="progress-bar-wrap">
-            <div class="progress-bar-fill" style="width:${pct}%;"></div>
-          </div>
+          <div class="progress-bar-wrap"><div class="progress-bar-fill" style="width:${pct}%;"></div></div>
         `;
       }
 
-      function renderWallet(address, displayName, counts, totals, oddPets, veryOddPets, ownedUniqueOdd, ownedUniqueVeryOdd) {
+      function renderWallet(address, displayName, counts, oddPets, veryOddPets, ownedUniqueOdd, ownedUniqueVeryOdd) {
         const u = window.__oddUltraUniqueTotals || {};
         const oddTotal = u.odd ?? null;
         const ultraTotal = u.ultraOdd ?? null;
 
         outWallet.innerHTML = `
-          <div class="row"><div class="k">Address</div><div class="v" style="font-size:12px; max-width:55%; overflow:hidden; text-overflow:ellipsis;">${address}</div></div>
-          ${displayName ? `<div class="row"><div class="k">Display name</div><div class="v">${displayName}</div></div>` : ''}
+          <div class="row"><div class="k">Address</div><div class="v" style="font-size:12px; max-width:60%; overflow:hidden; text-overflow:ellipsis;">${address}</div></div>
+          ${displayName ? `<div class="row"><div class="k">Display</div><div class="v">${displayName}</div></div>` : ''}
+
           <div style="margin-top:12px;">
             <div onclick="toggleSection('odd-list')" style="cursor:pointer; display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid #22304a; user-select:none;">
               <div class="v">Odd</div>
@@ -158,7 +192,7 @@
             </div>
           </div>
         `;
-        // Attach toggle helper after render
+
         window.toggleSection = function(id) {
           const el = document.getElementById(id);
           const chevronId = id === 'odd-list' ? 'odd-chevron' : 'ultra-chevron';
@@ -171,49 +205,107 @@
       }
 
       function renderCatalog(odd, ultraOdd) {
+        const typeRow = (t) => {
+          const owned = !!t.owned;
+          const imgSrc = t.iconUrl || null;
+          return `
+            <div style="display:flex; gap:10px; align-items:center; padding:8px 0; border-bottom:1px solid #22304a; opacity:${owned ? 1 : 0.45}">
+              <div style="position:relative; width:40px; height:40px; flex:0 0 40px;">
+                ${imgSrc
+                  ? `<img src="${imgSrc}" width="40" height="40" style="border-radius:10px; background:#0b1020; border:1px solid #22304a; display:block;" />`
+                  : `<div style="width:40px;height:40px;border-radius:10px;background:#0b1020;border:1px solid #22304a;display:flex;align-items:center;justify-content:center;font-size:18px;">🐾</div>`
+                }
+              </div>
+              <div style="flex:1; min-width:0;">
+                <div class="v" style="font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${owned ? '✅' : '⬜'} ${t.displayName}${t.variant ? ` (${t.variant})` : ''}</div>
+                <div class="k" style="font-size:12px;">appearanceId: ${t.appearanceId}</div>
+              </div>
+            </div>`;
+        };
+
         const section = (title, items) => `
           <div style="margin-bottom:18px;">
             <div class="v" style="margin-bottom:8px;">${title}</div>
             ${items.map(typeRow).join('') || '<div class="k">(none)</div>'}
           </div>
         `;
-        outCatalog.innerHTML =
-          section('All Odd types', odd) +
-          section('All Ultra Odd types', ultraOdd);
+
+        outCatalog.innerHTML = section('All Odd types', odd) + section('All Ultra Odd types', ultraOdd);
       }
 
-      function typeRow(t) {
-        const owned = !!t.owned;
-        const imgSrc = t.iconUrl || null;
-        return `
-          <div style="display:flex; gap:10px; align-items:center; padding:8px 0; border-bottom:1px solid #22304a; opacity:${owned ? 1 : 0.45}">
-            <div style="position:relative; width:40px; height:40px; flex:0 0 40px;">
-              ${imgSrc
-                ? `<img src="${imgSrc}" width="40" height="40" style="border-radius:10px; background:#0b1020; border:1px solid #22304a; display:block;" />`
-                : `<div style="width:40px;height:40px;border-radius:10px;background:#0b1020;border:1px solid #22304a;display:flex;align-items:center;justify-content:center;font-size:18px;">🐾</div>`
-              }
-            </div>
-            <div style="flex:1; min-width:0;">
-              <div class="v" style="font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
-                ${owned ? '✅' : '⬜'} ${t.displayName}${t.variant ? ` (${t.variant})` : ''}
-              </div>
-              <div class="k" style="font-size:12px;">appearanceId: ${t.appearanceId}</div>
-            </div>
-          </div>
-        `;
+      function renderGallery(oddPets, veryOddPets) {
+        const all = [...veryOddPets, ...oddPets];
+        const el = $('out-gallery');
+        if (!all.length) { el.innerHTML = ''; return; }
+        const grid = all.map(p => {
+          const isUltra = veryOddPets.some(x => x.id === p.id);
+          const burned = (p.name||'').toLowerCase().startsWith('unrevealed');
+          return `
+            <div style="position:relative;" title="${p.name}">
+              <img src="${p.iconUrl}" width="56" height="56" style="border-radius:10px; background:#0b1020; border:2px solid ${isUltra ? '#c084fc' : '#22304a'}; display:block;" />
+              ${burned ? '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:20px;">❌</div>' : ''}
+              ${isUltra ? '<div style="position:absolute;top:-4px;right:-4px;font-size:10px;">⚡</div>' : ''}
+            </div>`;
+        }).join('');
+        el.innerHTML = `
+          <div style="border-top:1px solid #22304a; padding-top:12px;">
+            <div class="v" style="margin-bottom:8px; font-size:13px;">Collection wall (${veryOddPets.length} ⚡ + ${oddPets.length} odd)</div>
+            <div style="display:flex; flex-wrap:wrap; gap:8px;">${grid}</div>
+          </div>`;
       }
 
-      async function run() {
-        err.textContent = "";
-        outWallet.innerHTML = "";
-        outCatalog.innerHTML = "";
+      function renderMissing(missingOdd, missingUltra) {
+        const el = $('out-missing');
+        if (!missingOdd.length && !missingUltra.length) { el.innerHTML = ''; return; }
+
+        const chip = (t) => {
+          const big = (t.path || '').toLowerCase().includes('bigblub') ? ' — BigBlub' : '';
+          return `<div style="background:#0b1020; border:1px solid #22304a; border-radius:8px; padding:4px 8px; font-size:12px; opacity:.7;">${t.displayName}${t.variant ? ' ('+t.variant+')' : ''}${big}</div>`;
+        };
+
+        const section = (label, items) => items.length === 0 ? '' : `
+          <div style="margin-bottom:10px;">
+            <div class="k" style="font-size:13px; margin-bottom:6px;">Missing ${label} (${items.length})</div>
+            <div style="display:flex; flex-wrap:wrap; gap:6px;">${items.map(chip).join('')}</div>
+          </div>`;
+
+        el.innerHTML = `
+          <div style="border-top:1px solid #22304a; padding-top:12px;">
+            <div onclick="toggleMissing()" style="cursor:pointer; display:flex; justify-content:space-between; margin-bottom:8px; user-select:none;">
+              <div class="v" style="font-size:13px;">Missing types 🎯</div>
+              <span id="missing-chevron" style="font-size:12px; opacity:.7;">▼</span>
+            </div>
+            <div id="missing-inner" style="display:none;">
+              ${section('Ultra Odd', missingUltra)}
+              ${section('Odd', missingOdd)}
+            </div>
+          </div>`;
+
+        window.toggleMissing = function() {
+          const inner = $('missing-inner');
+          const ch = $('missing-chevron');
+          const open = inner.style.display === 'none';
+          inner.style.display = open ? 'block' : 'none';
+          ch.textContent = open ? '▲' : '▼';
+        };
+      }
+
+      // --------------------
+      // API calls
+      // --------------------
+      async function runWalletCheck() {
+        err.textContent = '';
+        outWallet.innerHTML = '';
+        outCatalog.innerHTML = '';
+
         const a = addr.value.trim();
         if (!/^0x[0-9a-fA-F]{40}$/.test(a)) {
-          err.textContent = "Invalid address";
+          err.textContent = 'Invalid address';
           return;
         }
+
         btn.disabled = true;
-        btn.textContent = "Checking…";
+        btn.textContent = 'Checking…';
         try {
           const [r1, r2] = await Promise.all([
             fetch(`/api/owner?address=${encodeURIComponent(a)}`),
@@ -225,87 +317,23 @@
           if (!r2.ok) throw new Error(c.error || `HTTP ${r2.status}`);
 
           window.__oddUltraUniqueTotals = j.oddUltraUniqueTotals || null;
-          renderWallet(j.address, j.displayName, j.counts, j.totals, j.oddPets, j.veryOddPets, j.ownedUniqueOdd, j.ownedUniqueVeryOdd);
+          renderWallet(j.address, j.displayName, j.counts, j.oddPets, j.veryOddPets, j.ownedUniqueOdd, j.ownedUniqueVeryOdd);
           renderGallery(j.oddPets || [], j.veryOddPets || []);
           renderMissing(c.missingOdd || [], c.missingUltraOdd || []);
           renderCatalog(c.odd || [], c.ultraOdd || []);
-          const urlObj = new URL(location.href);
-          urlObj.searchParams.set('address', a);
-          history.replaceState(null, '', urlObj);
+
+          const u = new URL(location.href);
+          u.searchParams.set('address', a);
+          history.replaceState(null, '', u);
         } catch (e) {
           err.textContent = String(e && e.message ? e.message : e);
         } finally {
           btn.disabled = false;
-          btn.textContent = "Check";
+          btn.textContent = 'Check';
         }
       }
 
-      function renderGallery(oddPets, veryOddPets) {
-        const all = [...veryOddPets, ...oddPets];
-        if (!all.length) { $('out-gallery').innerHTML = ''; return; }
-        const grid = all.map(p => {
-          const isUltra = veryOddPets.includes(p);
-          const burned = (p.name||'').toLowerCase().startsWith('unrevealed');
-          return `
-            <div style="position:relative; text-align:center;" title="${p.name}">
-              <img src="${p.iconUrl}" width="56" height="56" style="border-radius:10px; background:#0b1020; border:2px solid ${isUltra ? '#c084fc' : '#22304a'}; display:block;" />
-              ${burned ? '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:20px;">❌</div>' : ''}
-              ${isUltra ? '<div style="position:absolute;top:-4px;right:-4px;font-size:10px;">⚡</div>' : ''}
-            </div>`;
-        }).join('');
-        $('out-gallery').innerHTML = `
-          <div style="border-top:1px solid #22304a; padding-top:12px;">
-            <div class="v" style="margin-bottom:8px; font-size:13px;">Collection wall (${veryOddPets.length} ⚡ + ${oddPets.length} odd)</div>
-            <div style="display:flex; flex-wrap:wrap; gap:8px;">${grid}</div>
-          </div>`;
-      }
-
-      function renderMissing(missingOdd, missingUltra) {
-        if (!missingOdd.length && !missingUltra.length) { $('out-missing').innerHTML = ''; return; }
-        const section = (label, items) => items.length === 0 ? '' : `
-          <div style="margin-bottom:10px;">
-            <div class="k" style="font-size:13px; margin-bottom:6px;">Missing ${label} (${items.length})</div>
-            <div style="display:flex; flex-wrap:wrap; gap:6px;">
-              ${items.map(t => {
-                const big = (t.path || '').toLowerCase().includes('bigblub') ? ' — BigBlub' : '';
-                return `<div style="background:#0b1020; border:1px solid #22304a; border-radius:8px; padding:4px 8px; font-size:12px; opacity:.7;">${t.displayName}${t.variant ? ' ('+t.variant+')' : ''}${big}</div>`;
-              }).join('')}
-            </div>
-          </div>`;
-        $('out-missing').innerHTML = `
-          <div style="border-top:1px solid #22304a; padding-top:12px;">
-            <div onclick="toggleSection('missing-inner')" style="cursor:pointer; display:flex; justify-content:space-between; margin-bottom:8px; user-select:none;">
-              <div class="v" style="font-size:13px;">Missing types 🎯</div>
-              <span id="missing-chevron" style="font-size:12px; opacity:.7;">▼</span>
-            </div>
-            <div id="missing-inner" style="display:none;">
-              ${section('Ultra Odd', missingUltra)}
-              ${section('Odd', missingOdd)}
-            </div>
-          </div>`;
-      }
-
-      async function loadStats() {
-        const el = $('out-stats');
-        el.innerHTML = '<div class="k" style="padding:12px 0;">Loading…</div>';
-        try {
-          const r = await fetch('/api/stats');
-          const j = await r.json();
-          if (!r.ok) throw new Error(j.error);
-          statsLoaded = true;
-          const topName = j.topCollector?.profileName || (j.topCollector?.address?.slice(0,10)+'…');
-          el.innerHTML = `
-            <div class="row"><div class="k">Total collectors</div><div class="v">${j.totalCollectors}</div></div>
-            <div class="row"><div class="k">Total Ultra Odd pets</div><div class="v">⚡ ${j.totalUltraOdd}</div></div>
-            <div class="row"><div class="k">Total Odd pets (of collectors)</div><div class="v">🎯 ${j.totalOdd}</div></div>
-            <div class="row"><div class="k">#1 collector</div><div class="v" style="max-width:60%;overflow:hidden;text-overflow:ellipsis;">${topName || '—'} (⚡${j.topCollector?.ultraOdd} / 🎯${j.topCollector?.odd})</div></div>
-            <div style="margin-top:14px; opacity:.6; font-size:12px;">Rarity heatmap (per appearance type) coming soon.</div>
-          `;
-        } catch(e) {
-          el.innerHTML = `<div class="err">${e.message || e}</div>`;
-        }
-      }
-
+      let lbLoaded = false;
       async function loadLeaderboard(force) {
         const el = $('out-leaderboard');
         el.innerHTML = '<div class="k" style="padding:12px 0;">Loading leaderboard… (may take 10–30s first time)</div>';
@@ -321,15 +349,13 @@
             : '';
 
           const rows = (j.entries || []).map((e, i) => {
-            const isMe = addr.value.trim().toLowerCase() === e.address;
-            const name = e.profileName || (e.address.slice(0,6) + '…' + e.address.slice(-4));
             const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i+1}`;
+            const name = e.profileName || (e.address.slice(0,6) + '…' + e.address.slice(-4));
             return `
-              <div onclick="(function(){var a='${e.address}'; document.getElementById('addr').value=a; run(); document.querySelectorAll('.tab-btn')[0].click();})()"
-                style="display:flex; gap:10px; align-items:center; padding:9px 0; border-bottom:1px solid #22304a; cursor:pointer; ${isMe ? 'background:#0d1e3a;border-radius:8px;padding:9px 6px;' : ''}">
+              <div style="display:flex; gap:10px; align-items:center; padding:9px 0; border-bottom:1px solid #22304a;">
                 <div style="min-width:32px; text-align:center; font-size:15px;">${medal}</div>
                 <div style="flex:1; min-width:0;">
-                  <div class="v" style="font-size:14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${name}${isMe ? ' 👈' : ''}</div>
+                  <div class="v" style="font-size:14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${name}</div>
                   <div class="k" style="font-size:11px;">${e.address.slice(0,10)}…</div>
                 </div>
                 <div style="text-align:right;">
@@ -354,25 +380,50 @@
         }
       }
 
-      btn.addEventListener("click", async () => {
-        await run();
-        // After checking a wallet, jump to Wallet tab
-        const walletBtn = document.querySelector('.tab-btn[data-tab="wallet"]');
-        if (walletBtn) walletBtn.click();
+      let statsLoaded = false;
+      async function loadStats() {
+        if (statsLoaded) return;
+        const el = $('out-stats');
+        el.innerHTML = '<div class="k" style="padding:12px 0;">Loading…</div>';
+        try {
+          const r = await fetch('/api/stats');
+          const j = await r.json();
+          if (!r.ok) throw new Error(j.error);
+          statsLoaded = true;
+          const topName = j.topCollector?.profileName || (j.topCollector?.address?.slice(0,10)+'…');
+          el.innerHTML = `
+            <div class="row"><div class="k">Total collectors</div><div class="v">${j.totalCollectors}</div></div>
+            <div class="row"><div class="k">Total Ultra Odd pets</div><div class="v">⚡ ${j.totalUltraOdd}</div></div>
+            <div class="row"><div class="k">Total Odd pets (of collectors)</div><div class="v">🎯 ${j.totalOdd}</div></div>
+            <div class="row"><div class="k">#1 collector</div><div class="v" style="max-width:60%;overflow:hidden;text-overflow:ellipsis;">${topName || '—'} (⚡${j.topCollector?.ultraOdd} / 🎯${j.topCollector?.odd})</div></div>
+          `;
+        } catch(e) {
+          el.innerHTML = `<div class="err">${e.message || e}</div>`;
+        }
+      }
+
+      // wiring
+      btn.addEventListener('click', async () => {
+        activateSub('user');
+        await runWalletCheck();
       });
-      addr.addEventListener("keydown", (e) => { if (e.key === "Enter") btn.click(); });
+      addr.addEventListener('keydown', (e) => { if (e.key === 'Enter') btn.click(); });
 
       // Prefill from URL ?address= or default
       const urlAddr = new URLSearchParams(location.search).get('address');
       addr.value = (urlAddr && /^0x[0-9a-fA-F]{40}$/.test(urlAddr))
         ? urlAddr
-        : "0x092A58AE214343282EA615b3ffDB61fB71bD5B6C";
+        : '0x092A58AE214343282EA615b3ffDB61fB71bD5B6C';
 
-      // Default: leaderboard tab + auto-load
+      // Default: leaderboard tab
+      activateTop('leaderboard');
       loadLeaderboard();
 
-      // Auto-run if address in URL
-      if (urlAddr && /^0x[0-9a-fA-F]{40}$/.test(urlAddr)) btn.click();
+      // Auto-run wallet check if address in URL (and jump to wallet)
+      if (urlAddr && /^0x[0-9a-fA-F]{40}$/.test(urlAddr)) {
+        activateTop('wallet');
+        btn.click();
+      }
     </script>
   </body>
 </html>
