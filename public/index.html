@@ -40,15 +40,15 @@
         <div id="err" class="err"></div>
       </div>
 
-      <div id="result-area" style="display:none; margin-top:4px;">
+      <div id="result-area" style="display:block; margin-top:4px;">
         <div class="tabs">
-          <button class="tab-btn active" data-tab="wallet">🎒 Wallet</button>
+          <button class="tab-btn" data-tab="wallet">🎒 Wallet</button>
           <button class="tab-btn" data-tab="catalog">📖 All types</button>
-          <button class="tab-btn" data-tab="leaderboard">🏆 Board</button>
+          <button class="tab-btn active" data-tab="leaderboard">🏆 Board</button>
           <button class="tab-btn" data-tab="stats">📊 Stats</button>
         </div>
 
-        <div class="tab-panel active panel-wrap" id="tab-wallet">
+        <div class="tab-panel panel-wrap" id="tab-wallet">
           <div id="out-wallet"></div>
           <div id="out-gallery" style="margin-top:14px;"></div>
           <div id="out-missing" style="margin-top:14px;"></div>
@@ -58,7 +58,7 @@
           <div id="out-catalog"></div>
         </div>
 
-        <div class="tab-panel panel-wrap" id="tab-leaderboard">
+        <div class="tab-panel active panel-wrap" id="tab-leaderboard">
           <div id="out-leaderboard"><div class="k" style="padding:12px 0;">Click to load leaderboard…</div></div>
         </div>
 
@@ -229,7 +229,6 @@
           renderGallery(j.oddPets || [], j.veryOddPets || []);
           renderMissing(c.missingOdd || [], c.missingUltraOdd || []);
           renderCatalog(c.odd || [], c.ultraOdd || []);
-          resultArea.style.display = '';
           const urlObj = new URL(location.href);
           urlObj.searchParams.set('address', a);
           history.replaceState(null, '', urlObj);
@@ -355,8 +354,13 @@
         }
       }
 
-      btn.addEventListener("click", run);
-      addr.addEventListener("keydown", (e) => { if (e.key === "Enter") run(); });
+      btn.addEventListener("click", async () => {
+        await run();
+        // After checking a wallet, jump to Wallet tab
+        const walletBtn = document.querySelector('.tab-btn[data-tab="wallet"]');
+        if (walletBtn) walletBtn.click();
+      });
+      addr.addEventListener("keydown", (e) => { if (e.key === "Enter") btn.click(); });
 
       // Prefill from URL ?address= or default
       const urlAddr = new URLSearchParams(location.search).get('address');
@@ -364,8 +368,11 @@
         ? urlAddr
         : "0x092A58AE214343282EA615b3ffDB61fB71bD5B6C";
 
+      // Default: leaderboard tab + auto-load
+      loadLeaderboard();
+
       // Auto-run if address in URL
-      if (urlAddr && /^0x[0-9a-fA-F]{40}$/.test(urlAddr)) run();
+      if (urlAddr && /^0x[0-9a-fA-F]{40}$/.test(urlAddr)) btn.click();
     </script>
   </body>
 </html>
