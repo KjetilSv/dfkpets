@@ -1,6 +1,6 @@
 import type { PagesFunction } from "@cloudflare/workers-types";
 import { fetchPetsByOwner } from "../_utils/gql";
-import { POOL_GROUP, petIconUrl } from "../_utils/config";
+import { POOL_GROUP } from "../_utils/config";
 import { getOddUltraTypesUnique } from "../_utils/meta";
 
 export const onRequestGet: PagesFunction = async ({ request }) => {
@@ -31,7 +31,8 @@ export const onRequestGet: PagesFunction = async ({ request }) => {
   const decorate = (t: any, ownedSet: Set<number>) => ({
     ...t,
     owned: ownedSet.has(t.appearanceId),
-    iconUrl: appearanceToPetId.has(t.appearanceId) ? petIconUrl(appearanceToPetId.get(t.appearanceId)!) : null,
+    // Local static icon library (generated once)
+    iconUrl: `/type-icons/${t.appearanceId}.png`,
   });
 
   const odd = types.odd.map((t) => decorate(t, ownedOdd));
