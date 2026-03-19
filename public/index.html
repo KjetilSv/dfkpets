@@ -48,12 +48,12 @@
     <div class="wrap">
       <h1>Pet Hunter 🐾</h1>
       <div style="opacity:0.6; font-size:13px; margin:-10px 0 14px;">A DFK pet tracker for the true collectors</div>
-  <div style="opacity:0.55; font-size:12px; margin:-8px 0 14px;">(Type icons are served locally for speed + reliability)</div>
 
       <!-- TOP LEVEL TABS -->
       <div class="tabs">
         <button class="tab-btn active" data-top="leaderboard">🏆 Leaderboard</button>
         <button class="tab-btn" data-top="wallet">🎒 Wallet</button>
+        <button class="tab-btn" data-top="stats">📊 Stats</button>
       </div>
 
       <!-- LEADERBOARD PANEL -->
@@ -66,15 +66,13 @@
         <div class="card">
           <input id="addr" placeholder="0x..." autocomplete="off" autocapitalize="off" spellcheck="false" />
           <button id="btn">Check</button>
-          <button id="btn-share" style="background:#22c55e; color:#05120a;">Download Type Completion Wall (PNG)</button>
           <div id="err" class="err"></div>
-          <div class="k" style="font-size:12px; margin-top:8px;">Tip: SVG works great for Discord/Twitter. PNG export can come later.</div>
         </div>
 
         <div class="subtabs">
           <button class="subtab-btn active" data-sub="user">👤 User wallet</button>
           <button class="subtab-btn" data-sub="types">📖 All types</button>
-          <button class="subtab-btn" data-sub="stats">📊 Stats</button>
+          <button class="subtab-btn" data-sub="wall">🧱 Collection wall</button>
         </div>
 
         <div class="subpanel active subpanel-wrap" id="sub-user">
@@ -87,9 +85,22 @@
           <div id="out-catalog"></div>
         </div>
 
+        <div class="subpanel subpanel-wrap" id="sub-wall">
+          <div id="out-wall"><div class="k" style="padding:12px 0;">Run a wallet check to load wall…</div></div>
+        </div>
+
         <div class="subpanel subpanel-wrap" id="sub-stats">
           <div id="out-stats"><div class="k" style="padding:12px 0;">Click to load stats…</div></div>
         </div>
+      </div>
+
+      <!-- STATS PANEL (TOP TAB) -->
+      <div class="tab-panel panel-wrap" id="top-stats">
+        <div class="card" style="margin-top:0;">
+          <div class="v" style="font-size:14px; margin-bottom:6px;">Stats</div>
+          <div class="k" style="font-size:12px;">Global stats (loads on open)</div>
+        </div>
+        <div id="out-stats-top"><div class="k" style="padding:12px 0;">Loading stats…</div></div>
       </div>
     </div>
 
@@ -98,10 +109,12 @@
 
       const addr = $("addr");
       const btn = $("btn");
-      const btnShare = $("btn-share");
+      // btnShare is inside the Collection wall tab (not global wallet header)
+      let btnShare = null;
       const err = $("err");
       const outWallet = $("out-wallet");
       const outCatalog = $("out-catalog");
+      const outWall = $("out-wall");
 
       // --------------------
       // TOP TABS
@@ -113,7 +126,10 @@
         $("top-" + tab).classList.add('active');
       }
       document.querySelectorAll('.tab-btn').forEach(b => {
-        b.addEventListener('click', () => activateTop(b.dataset.top));
+        b.addEventListener('click', () => {
+          activateTop(b.dataset.top);
+          if (b.dataset.top === 'stats') loadStats();
+        });
       });
 
       // --------------------
@@ -128,7 +144,6 @@
       document.querySelectorAll('.subtab-btn').forEach(b => {
         b.addEventListener('click', () => {
           activateSub(b.dataset.sub);
-          if (b.dataset.sub === 'stats') loadStats();
         });
       });
 
@@ -212,6 +227,106 @@
           el.style.display = open ? 'block' : 'none';
           if (chevron) chevron.textContent = open ? '▲' : '▼';
         };
+      }
+
+      let __wallDebug = false;
+
+      function sortTypes(items) {
+        return [...(items || [])].sort((a,b) => Number(a.appearanceId) - Number(b.appearanceId));
+      }
+
+      function renderTypeWall(odd, ultraOdd) {
+        odd = sortTypes(odd);
+        ultraOdd = sortTypes(ultraOdd);
+
+        const cols = 8;
+        const tile = 64;
+        const gap = 8;
+
+        const tileHtml = (t, strokeOwned) => {
+          const owned = (t.owned === true);
+          const border = owned ? strokeOwned : '#334155';
+          const imgClass = owned ? 'edge' : 'bw';
+
+          // Use *actual owned pet image* when owned, otherwise fall back to the static type-icon.
+          const imgSrc = owned && t.ownedPetId
+            ? `https://pets.defikingdoms.com/image/${t.ownedPetId}`
+            : t.iconUrl;
+
+          const fullPetId = t.ownedPetId ? String(t.ownedPetId) : '-';
+          const m = fullPetId.match(/^1000000(\d{6})$/);
+          const shortPetId = m ? m[1] : null;
+          const petLabel = shortPetId ? `${fullPetId} (${shortPetId})` : fullPetId;
+
+          const overlay = __wallDebug ? `
+            <div style="position:absolute; left:6px; top:6px; background:rgba(0,0,0,0.55); border-radius:6px; padding:2px 6px; font-size:11px; font-weight:700; line-height:1.25;">
+              <div>${owned ? '✅' : '⬜'} F:${t.appearanceId}</div>
+              <div style="opacity:.85;">P:${petLabel}</div>
+            </div>` : '';
+
+          return `
+            <div style="position:relative; width:${tile}px; height:${tile}px; border-radius:12px; overflow:hidden; background:#000; border:4px solid ${border};">
+              <img src="${imgSrc}" width="${tile}" height="${tile}" class="type-icon ${imgClass}" style="width:${tile}px; height:${tile}px;" onerror="this.remove();" />
+              ${overlay}
+            </div>`;
+        };
+
+        const grid = (items, strokeOwned) => {
+          const w = cols * tile + (cols - 1) * gap;
+          return `
+            <div style="display:grid; grid-template-columns:repeat(${cols}, ${tile}px); gap:${gap}px; width:${w}px; max-width:100%; overflow:auto; padding-bottom:2px;">
+              ${items.map(t => tileHtml(t, strokeOwned)).join('')}
+            </div>`;
+        };
+
+        const section = (title, items, strokeOwned) => {
+          const ownedCount = items.filter(i => i.owned === true).length;
+          return `
+            <div style="margin-bottom:14px;">
+              <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:10px;">
+                <div class="v">${title}</div>
+                <div class="k" style="font-size:12px;">${ownedCount}/${items.length}</div>
+              </div>
+              ${grid(items, strokeOwned)}
+            </div>`;
+        };
+
+        const debugToggle = `
+          <div style="margin-top:10px; border-top:1px solid #22304a; padding-top:10px; display:flex; justify-content:space-between; align-items:center;">
+            <div class="k" style="font-size:12px;">Debug overlay (IDs)</div>
+            <label style="display:flex; align-items:center; gap:8px; font-size:12px; user-select:none; cursor:pointer;">
+              <input id="wall-debug-toggle" type="checkbox" ${__wallDebug ? 'checked' : ''} />
+              <span class="v">${__wallDebug ? 'ON' : 'OFF'}</span>
+            </label>
+          </div>`;
+
+        outWall.innerHTML = `
+          <div class="card" style="margin-top:0;">
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:12px;">
+              <div>
+                <div class="v" style="font-size:14px; margin-bottom:6px;">Type Completion Wall</div>
+                <div class="k" style="font-size:12px;">Owned uses real pet images · Missing uses type-icons</div>
+              </div>
+              <button id="btn-share" style="width:auto; padding:8px 12px; background:#22c55e; color:#05120a;">Download PNG</button>
+            </div>
+          </div>
+          ${section('Ultra Odd', ultraOdd, '#c084fc')}
+          ${section('Odd', odd, '#f59e0b')}
+          <div class="card" style="margin-top:0;">
+            ${debugToggle}
+          </div>
+        `;
+
+        // wire download after DOM is in place
+        wireDownloadButton();
+
+        const cb = document.getElementById('wall-debug-toggle');
+        if (cb) {
+          cb.addEventListener('change', () => {
+            __wallDebug = cb.checked;
+            renderTypeWall(odd, ultraOdd);
+          });
+        }
       }
 
       function renderCatalog(odd, ultraOdd) {
@@ -308,6 +423,7 @@
         err.textContent = '';
         outWallet.innerHTML = '';
         outCatalog.innerHTML = '';
+        outWall.innerHTML = '';
 
         const a = addr.value.trim();
         if (!/^0x[0-9a-fA-F]{40}$/.test(a)) {
@@ -332,6 +448,7 @@
           renderGallery(j.oddPets || [], j.veryOddPets || []);
           renderMissing(c.missingOdd || [], c.missingUltraOdd || []);
           renderCatalog(c.odd || [], c.ultraOdd || []);
+          renderTypeWall(c.odd || [], c.ultraOdd || []);
 
           const u = new URL(location.href);
           u.searchParams.set('address', a);
@@ -394,14 +511,15 @@
       let statsLoaded = false;
       async function loadStats() {
         if (statsLoaded) return;
-        const el = $('out-stats');
-        el.innerHTML = '<div class="k" style="padding:12px 0;">Loading…</div>';
+        const el = $('out-stats-top') || $('out-stats');
+        if (el) el.innerHTML = '<div class="k" style="padding:12px 0;">Loading…</div>';
         try {
           const r = await fetch('/api/stats');
           const j = await r.json();
           if (!r.ok) throw new Error(j.error);
           statsLoaded = true;
           const topName = j.topCollector?.profileName || (j.topCollector?.address?.slice(0,10)+'…');
+          if (!el) return;
           el.innerHTML = `
             <div class="row"><div class="k">Total collectors</div><div class="v">${j.totalCollectors}</div></div>
             <div class="row"><div class="k">Total Ultra Odd pets</div><div class="v">⚡ ${j.totalUltraOdd}</div></div>
@@ -519,8 +637,8 @@
           const c = await r.json();
           if (!r.ok) throw new Error(c.error || `HTTP ${r.status}`);
 
-          const ultra = c.ultraOdd || [];
-          const odd = c.odd || [];
+          const ultra = sortTypes(c.ultraOdd || []);
+          const odd = sortTypes(c.odd || []);
 
           // layout
           const W = 700;
@@ -528,8 +646,8 @@
           const titleH = 64;
           const sectionGap = 18;
           const cols = 8;
-          const tile = 74;
-          const gap = 10;
+          const tile = 64;
+          const gap = 8;
           const frame = 4;
 
           const sectionHeight = (count) => {
@@ -573,7 +691,12 @@
 
             y += 22;
 
-            const imgs = await Promise.all(items.map((t) => loadImage(t.iconUrl)));
+            const imgs = await Promise.all(items.map((t) => {
+            const src = (t.owned === true && t.ownedPetId)
+              ? `https://pets.defikingdoms.com/image/${t.ownedPetId}`
+              : t.iconUrl;
+            return loadImage(src);
+          }));
 
             for (let i = 0; i < items.length; i++) {
               const t = items[i];
@@ -601,6 +724,17 @@
                 ctx.drawImage(img, x, yy, tile, tile);
                 ctx.restore();
                 ctx.filter = 'none';
+              }
+
+              // Debug label: ✅/⬜ + appearanceId (only when debug overlay is ON)
+              if (__wallDebug) {
+                ctx.fillStyle = 'rgba(0,0,0,0.55)';
+                roundRect(ctx, x+4, yy+4, 48, 18, 6);
+                ctx.fill();
+                ctx.fillStyle = '#e8eefc';
+                ctx.font = '700 11px system-ui, -apple-system, Segoe UI, Roboto, Arial';
+                const mark = (t.owned === true) ? '✅' : '⬜';
+                ctx.fillText(`${mark} ${t.appearanceId}`, x+8, yy+17);
               }
             }
 
@@ -638,12 +772,16 @@
         }
       }
 
+      function wireDownloadButton() {
+        btnShare = $("btn-share");
+        if (btnShare) btnShare.addEventListener('click', downloadTypeCompletionWallPng);
+      }
+
       // wiring
       btn.addEventListener('click', async () => {
         activateSub('user');
         await runWalletCheck();
       });
-      btnShare.addEventListener('click', downloadTypeCompletionWallPng);
       addr.addEventListener('keydown', (e) => { if (e.key === 'Enter') btn.click(); });
 
       // Prefill from URL ?address= or default

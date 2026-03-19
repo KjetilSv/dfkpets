@@ -28,12 +28,17 @@ export const onRequestGet: PagesFunction = async ({ request }) => {
     if (group === "veryOdd") ownedUltra.add(appearanceId);
   }
 
-  const decorate = (t: any, ownedSet: Set<number>) => ({
-    ...t,
-    owned: ownedSet.has(t.appearanceId),
-    // Local static icon library (generated once)
-    iconUrl: `/type-icons/${t.appearanceId}.png`,
-  });
+  const decorate = (t: any, ownedSet: Set<number>) => {
+    const owned = ownedSet.has(t.appearanceId);
+    const ownedPetId = owned ? (appearanceToPetId.get(t.appearanceId) ?? null) : null;
+    return {
+      ...t,
+      owned,
+      ownedPetId,
+      // Local static icon library (generated once)
+      iconUrl: `/type-icons/${t.appearanceId}.png`,
+    };
+  };
 
   const odd = types.odd.map((t) => decorate(t, ownedOdd));
   const ultraOdd = types.ultraOdd.map((t) => decorate(t, ownedUltra));
